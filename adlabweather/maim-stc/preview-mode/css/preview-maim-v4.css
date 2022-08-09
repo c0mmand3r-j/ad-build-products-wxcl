@@ -1,0 +1,477 @@
+/*
+# ------------------------------------------------------------------------------
+# | Preview-Mode for MA-IM: preview-v3.css
+# ------------------------------------------------------------------------------
+# |
+# | NOTE: v1 is not labeled as "preview-v1.css". It's just labled "preview.css"
+# |
+# | Version ID: v3
+# |
+# | Updates that were made in this version:
+# | -changed positioning/clipping path of BG object being loaded
+# ------------------------------------------------------------------------------
+*/
+
+
+
+
+/* IBM Plex Fonts for Preview Form */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 450;
+  src: local("IBM Plex Sans Text"), local("IBMPlexSans-Text"), url("../IBM-Plex-Sans/fonts/complete/woff/IBMPlexSans-Text.woff") format("woff");
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans SemiBold';
+  font-style: normal;
+  font-weight: 600;
+  src: local("IBM Plex Sans SemiBold"), local("IBMPlexSans-SemiBold"), url("../IBM-Plex-Sans/fonts/complete/woff/IBMPlexSans-SemiBold.woff") format("woff");
+}
+/* Size key:
+    sm = 375x667 = iPhone 6/6s/7/8 - aka - rg = regular
+    md = 414x736 = iPhone Plus
+    lg = 375x812 = iPhone X/Xs
+    xl = 414x896 = iPhone Xr/Xs-Max
+*/
+
+/* Preview Form Structure & Styling */
+  body {margin: 0;background: #171717;}
+  /* hr{border-bottom: 1px solid #15252f;} */
+  hr{
+    border: none;
+    background-color: #8c8c8c;
+    height: 2px;
+  }
+
+  #previewMainContainer{
+    opacity: 0;
+  }
+/* previewErrorOutput ====================================================== */
+  #previewErrorOutput{
+    width: 70%;
+    background: red;
+    color: white;
+    margin: 1em auto;
+    padding: 1em;
+    font-family: 'IBM Plex Sans SemiBold';
+    font-size: 14px;
+    line-height: 24px;
+    border-radius: 1em;
+    border: 6px solid #333;
+  }
+
+  #previewErrorOutput footer{
+    font-size: 12px;
+    line-height: 18px;
+    margin-top: 3em;
+  }
+/* PreviewMode:raw ========================================================== */
+  body.raw{background: #333;}
+  #previewMainContainer.raw{position: relative; opacity: 1; overflow: hidden; margin: 0 auto;}
+  #previewMainContainer.raw.sm{width:375px;height: 667px;}
+  #previewMainContainer.raw.md{width:414px;height: 736px;}
+  #previewMainContainer.raw.lg{width:375px;height: 812px;}
+  #previewMainContainer.raw.xl{width:414px;height: 896px;}
+
+  .raw #previewColLeft{
+    width: 90%;
+    padding:5%;
+    position:absolute;
+    margin: 0;
+  	color:#15252f;
+  	background:#fff;
+  	font-family: 'IBM Plex Sans SemiBold';
+  	font-size: 14px;
+  	line-height: 24px;
+    transform: translateX(-100%);
+    z-index: 100;
+    transition: transform 0.0s;
+  }
+  .raw #previewColLeft.on{transform: translateX(0);transition: transform 0.5s;}
+
+  #previewAdContainer.raw.sm{bottom: 110px; top:unset; width:320px; height:180px;}
+  #previewAdContainer.raw.md, #previewAdContainer.raw.lg, #previewAdContainer.raw.xl{bottom: 110px; top:unset; width:360px; height:180px;}
+
+  #previewBg.raw.sm{bottom: 0; width:400px; height:700px;}
+  #previewBg.raw.md, #previewBg.raw.lg, #previewBg.raw.xl{bottom: 0; width:500px; height:800px;}
+
+  #previewMainContainer.preview{display: block;width:900px;margin: 0 auto;opacity: 1;}
+  /* Responsive adjustments for widths less than form layout */
+  #previewAltContainer{display: none;}
+  @media screen and (max-width: 799px) {
+    #previewMainContainer.preview{display: none;}
+    #previewAltContainer.preview{
+      display: block;
+      width: 100%;
+      padding: 1.25em;
+      color:#ed6827;
+    	font-family: 'IBM Plex Sans SemiBold';
+    	font-size: 14px;
+    	line-height: 24px;
+      text-align: center;
+    }
+    #previewAltContainer p{
+      border-top: 2px solid #15252f;
+      width: 50%;
+      margin: 10px auto;
+      padding: 10px 0;
+    }
+    #previewAltContainer img{
+      min-width: 200px;
+      width: 50%;
+      margin: 10px auto;
+    }
+  }
+
+  #previewColLeft{
+    width: 300px;
+    float: left;
+    /* margin: 60px 42px 12px 12px; */
+    margin: 31px 40px 10px 30px;
+  	color:#15252f;
+  	font-family: 'IBM Plex Sans SemiBold';
+  	font-size: 14px;
+  	line-height: 24px;
+  }
+  #previewFormLogo{width: 280px; height: auto;margin: 21px 0 8px;}
+  /* Dynamic Client Name */
+  #previewFormProduct{margin: 21px 0;    color: #f3f3f3;font-size: 16px;font-family: "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;}
+  #previewFormClientName{margin: 21px 0;    color: #f3f3f3;font-size: 16px;font-family: "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;    letter-spacing: .5px;}
+  /* Radio Buttons for Device Size */
+  #previewFormDeviceSize{
+    margin: 14px 0;
+    font-size: 16px;
+    color: #f3f3f3;
+    font-family: "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+    font-weight: 400;
+    letter-spacing: .5px;
+
+  }
+  #previewFormDeviceSize p{
+    margin: 19px 0 0 0;
+  }
+  #previewFormDeviceSize input[type="radio"]:checked + label {
+      background-color: #565656;
+      cursor: default;
+  }
+  #previewFormDeviceSize input[type="radio"] {
+    opacity: 0;
+    position: fixed;
+    width: 0;
+    }
+
+  input[type="radio"], label[for] {
+      cursor: pointer;
+    }
+
+  #previewFormDeviceSize label {
+      display: inline-block;
+      background-color: #282828;
+      padding: 3px 24px;
+      margin: 12px -2px 9px 0;
+      font-size: 16px;
+    }
+
+  #previewFormDeviceSize label#label-01 {
+      border-radius: 4px 0 0 4px;
+    }
+
+  #previewFormDeviceSize label#label-04 {
+      border-radius: 0 4px 4px 0;
+    }
+
+  /* Condition Select Menu */
+  #previewFormCondition{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    position: relative;
+
+    text-align: center;
+    z-index: 3;
+    margin: 27px auto 0;
+    padding: 0;
+    max-width: 350px;
+
+    font-size: 16px;
+    color: #f3f3f3;
+    font-family: "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+    letter-spacing: .5px;
+    font-weight: bold;
+  }
+
+  #btnPrevCond img, #btnNextCond img {
+      position: relative;
+      width: 12px;
+  }
+
+  #btnPrevCond{width: 50%;cursor: pointer;text-align: left;position: absolute;padding: 3px 40px 10px 0;}
+  #btnNextCond{width: 50%;cursor: pointer;text-align: right;position: absolute;right: 0;padding: 3px 0 10px 40px;}
+  #txtCondName{width: 215px;text-align: center;margin: 0 auto;}
+  #previewFormConditionIndex{
+    width: 100%;
+    color:#ffffff;
+  	font-family: 'IBM Plex Sans';
+  	font-size: 12px;
+    font-weight: 400;
+    font-style: italic;
+    letter-spacing: .32px;
+  	line-height: 30px;
+    text-align: center;
+  }
+
+
+  #previewColRight{
+    width: 470px;
+    float: left;
+    margin: 17px 0 0 24px;
+    position: relative;
+    height: 870px;
+  }
+
+/* Preview Ad Container & BG Containers  */
+	  #previewAdContainer {
+    position: absolute;
+    width: 360px;
+    z-index: 5;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 280px; /* 96px;*/
+  }
+
+  #previewAdContainer.xl {height: 140px; top: 663px;}
+  /*#previewAdContainer.lg {height: 140px; top: 608px;}*/
+  #previewAdContainer.md {height: 140px; top: 537px;}
+  #previewAdContainer.sm {height: 105px; bottom: 124px;}
+  #previewAdContainer.xl.layout {height: 140px; top: 663px;}
+  #previewAdContainer.lg.layout {height: 140px; top: 579px;}
+  #previewAdContainer.md.layout {height: 140px; top: 537px;}
+  #previewAdContainer.sm.layout {height: 105px; bottom: 232px;}
+
+/* VIDEO CONTENT */
+
+
+/* VIDEO CONTENT */
+   /* Added this css properties to adjust the position of mobile preview for xl and lg - wodev comment */
+  #previewAppOverlay.xl{position: relative;top: 13px;}
+  #previewAppOverlay.lg{position: relative;top: 15px;}
+  #previewAppOverlay.md{position: relative;top: 12px;}
+  #previewBg {
+  /*  width: 414px; */
+    position: absolute;
+    z-index: 0;
+    left: 237px;
+    transform: translateX(-50%);
+  }
+  /* Modified the css properties for bg creative- wodev comment */
+ #previewBg.xl { width:500px; height: 800px; bottom: 190px; left: 235px; -webkit-clip-path: polygon(8% 19%, 92.6% 19%, 93% 120.63%, 77.2% 121.88%, 67.6% 123.63%, 48.4% 123.88%, 7% 119.63%); clip-path: polygon(8% 19%, 92.6% 19%, 93% 120.63%, 77.2% 121.88%, 67.6% 123.63%, 48.4% 123.88%, 7% 119.63%); }
+ #previewBg.lg { width:500px; height: 800px; bottom: 185px; left: 235px; -webkit-clip-path: polygon(11.59% 18.5%, 88.6% 18.63%, 90% 120.63%, 75.2% 121.88%, 67.6% 121.63%, 49.4% 121.88%, 9.4% 119.63%); clip-path: polygon(11.59% 18.5%, 88.6% 18.63%, 90% 120.63%, 75.2% 121.88%, 67.6% 121.63%, 49.4% 121.88%, 9.4% 119.63%); }
+ #previewBg.md { width:500px; height: 800px; bottom: 175px; left: 237px; -webkit-clip-path: polygon(11.59% 18.50%, 88.6% 18.63%, 90% 120.63%, 75.2% 121.88%, 67.6% 121.63%, 49.4% 121.88%, 9.4% 119.63%); clip-path: polygon(11.59% 18.50%, 88.6% 18.63%, 90% 120.63%, 75.2% 121.88%, 67.6% 121.63%, 49.4% 121.88%, 9.4% 119.63%);}
+ #previewBg.sm {width: 400px; height: 660px; bottom: 168px; left: 37px; transform: translate(0px,0px); -webkit-clip-path: polygon(7.42% 9.54%, 92.52% 9.89%, 92.13% 112.78%, 74.94% 113.57%, 65.02% 113.48%, 48.37% 113.89%, 7.79% 113.01%); clip-path: polygon(7.42% 9.54%, 92.52% 9.89%, 92.13% 112.78%, 74.94% 113.57%, 65.02% 113.48%, 48.37% 113.89%, 7.79% 113.01%);}
+
+  #previewBg.xl.layout { bottom: 27px;}
+  #previewBg.lg.layout {bottom: 111px;}
+  #previewBg.md.layout {bottom: 153px;}
+  #previewBg.sm.layout { bottom: 222px;}
+
+/* Preview App Overlay = with images for device and ui */
+#previewDeviceOverlay {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  transform: translateX(-50%);
+}
+   /* Modified the previewDeviceOverlay css properties - wodev comment */
+#previewDeviceOverlay.xl {
+  width: 472px;
+  height: 950px;
+  background-size: 472px 950px;
+}
+#previewDeviceOverlay.lg {
+  width: 434px;
+  height: 865px;
+  background-size: 434px 865px;
+}
+
+#previewDeviceOverlay.md {
+  width: 440px;
+  height: 892px;
+  background-size: 440px 892px;
+}
+
+#previewDeviceOverlay.sm {
+  width: 384px;
+  height: 802px;
+  background-size: 384px 802px;
+  bottom: 55px;
+}
+#previewDeviceToggleBtn {position: absolute; z-index: 5; width: 100%; height: 100px;}
+#previewBlockerBottom {position: absolute; z-index: 11; width: 100%; height: 100px;bottom: 73px;}
+#previewUiCon.sm{
+  overflow: hidden;
+    position: absolute;
+    width: 322px;
+    height: 568px;
+    left: 76px;
+    top: 130px;
+}
+   /* Modified the previewUiOverlay css properties - wodev comment */
+#previewUiOverlay {position: absolute; z-index: 2;}
+#previewUiOverlay.xl{width: 414px;height: 896px; top: 17px;left: 50%;transform: translateX(-50%); background-position: top;background-repeat: no-repeat;background-size: 414px 896px;} /*ORIGINAL SIZE: background-size: 414px 896px;*/
+#previewUiOverlay.lg{width: 375px;height: 812px; top: 20px;left: 50%;transform: translateX(-50%); background-position: top;background-repeat: no-repeat;background-size: 375px 812px;} /*ORIGINAL SIZE: background-size: 375px 812px;*/
+#previewUiOverlay.md{width: 375px;height: 667px; top: 111px;left: 237px;transform: translateX(-50%); background-position: top;background-repeat: no-repeat;background-size: 375px 667px;} /*ORIGINAL SIZE: background-size: 379px 667px;*/
+#previewUiOverlay.sm{width: 320px;height: 568px; top: 0px;left: 0px;transform:translate(0px,0px) rotate(0deg);  background-position: center;background-repeat: no-repeat;background-size: 320px 568px;}
+
+/*This is an Overlay UI for Milli Device */
+#previewUiFCOverlay {position: absolute; z-index: 2;}
+#previewUiFCOverlay.xl{width: 414px;height: 896px; top: 17px;left: 50%;transform: translateX(-50%); background-position: top;background-repeat: no-repeat;background-size: 414px 896px;}
+#previewUiFCOverlay.lg{width: 375px;height: 812px; top: 20px;left: 50%;transform: translateX(-50%); background-position: top;background-repeat: no-repeat;background-size: 375px 812px;}
+#previewUiOverlay.md{width: 375px;height: 667px; top: 111px;left: 237px;transform: translateX(-50%); background-position: top;background-repeat: no-repeat;background-size: 375px 667px;} /*ORIGINAL SIZE: background-size: 379px 667px;*/
+#previewUiFCOverlay.sm{width: 322px;height: 568px; top: 130px;left: 50%;transform: translateX(-50%); background-position: center;background-repeat: no-repeat;background-size: 322px 568px;}
+/*This is an Overlay UI for Milli Device */
+
+
+/* Preview App Layout = with colored divs representing different regions */
+#previewAppLayout {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  transform: translateX(-50%);
+}
+#previewAppLayout.xl {width: 414px; height: 896px;}
+#previewAppLayout.lg {width: 375px; height: 812px;}
+#previewAppLayout.md {width: 414px; height: 736px;}
+#previewAppLayout.sm {width: 375px; height: 667px;}
+
+#previewAppHeader {
+  width: 100%;
+  position: absolute;
+  z-index: 1;
+  background: rgb(97, 158, 184);
+}
+#previewAppHeader.xl {height: 233px;}
+#previewAppHeader.lg {height: 211px;}
+#previewAppHeader.md {height: 191px;}
+#previewAppHeader.sm {height: 173px;}
+
+#previewAppToggle {
+  width: 100%;
+  height: 60px;
+  position: absolute;
+  z-index: 1;
+  background: rgb(157, 179, 187);
+}
+#previewAppToggle.xl {top: 233px;}
+#previewAppToggle.lg {top: 211px;}
+#previewAppToggle.md {top: 191px;}
+#previewAppToggle.sm {top: 173px;}
+
+#previewAppChart {
+  width: 100%;
+  position: absolute;
+  z-index: 1;
+  background: rgb(184, 143, 96);
+}
+#previewAppChart.xl {height: 280px; top: 293px;}
+#previewAppChart.lg {height: 218px; top: 271px;}
+#previewAppChart.md {height: 196px; top: 251px;}
+#previewAppChart.sm {height: 180px; top: 233px;}
+
+#previewAppInsight {
+  width: 90%;
+  height:80px;
+  position: absolute;
+  z-index: 3;
+  background: rgb(198, 189, 113);
+  left: 50%;
+  transform: translateX(-50%);
+}
+#previewAppInsight.xl {top: 573px;}
+#previewAppInsight.lg {top: 489px;}
+#previewAppInsight.md {top: 447px;}
+#previewAppInsight.sm {top: 413px;}
+
+#previewAppGradient {
+  width: 100%;
+  height: 80px;
+  position: absolute;
+  z-index: 2;
+  background: linear-gradient(to bottom, rgba(255,255,255,1) 50%,rgba(255,255,255,0) 100%);
+}
+#previewAppGradient.xl {top: 573px;}
+#previewAppGradient.lg {top: 489px;}
+#previewAppGradient.md {top: 447px;}
+#previewAppGradient.sm {top: 413px;}
+
+#previewAppNav {
+  width: 100%;
+  height: 49px;
+  position: absolute;
+  z-index: 1;
+  background: rgb(134, 134, 133);
+}
+#previewAppNav.xl {top: 813px;}
+#previewAppNav.lg {top: 729px;}
+#previewAppNav.md {top: 687px;}
+#previewAppNav.sm {top: 618px;}
+
+#previewAppCoverLeft, #previewAppCoverRight {
+  position: absolute;
+  z-index: 3;
+  background: #f2f6fa;
+}
+#previewAppCoverLeft.xl, #previewAppCoverRight.xl {display: none;}
+#previewAppCoverLeft.md, #previewAppCoverRight.md {display: none;}
+#previewAppCoverLeft.lg, #previewAppCoverLeft.sm {
+  width: 20px;
+  height: 812px;
+  left: -20px;
+}
+#previewAppCoverRight.lg, #previewAppCoverRight.sm {
+  width: 20px;
+  right: -20px;
+  height: 812px;
+}
+
+/* City/state edit update */
+
+#previewCityStateOverlay {
+  position: absolute;
+  margin-top: 15.5%;
+  z-index: 1000;
+  left: 26.31%;
+  width: 8.5rem;
+}
+#previewCityStateOverlay.sm {
+  margin-top: 33.7%;
+  left: 27.1%;
+}
+#previewCityStateOverlay.md {
+  margin-top: 29.7%;
+  left: 26.77%;
+}
+#previewCityStateOverlay.xl {
+  margin-top: 14.8%;
+  left: 26.5%;
+}
+#cityStateInput {
+  background-color: transparent;
+  width: 100%;
+  border: 1px solid transparent;
+  transition: 0.5s;
+  outline: none;
+  padding: 0.25rem;
+  cursor: pointer;
+  text-align: right;
+  color: #fff;
+  font-size: 0.92rem;
+  &:not([readonly]):focus {
+    border-color: #e7e7e7;
+  }
+}
+#cityStateInput :not([readonly]):focus {
+    border-color: #e7e7e7;
+}

@@ -1,0 +1,1833 @@
+
+
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,minimum-scale=1.0, maximum-scale=1.0, user-scaleable=no">
+    <title>Polaris X (MWIM)</title>
+    <script>
+    //Console Version Display//
+    var consoleStyle = [
+      'background: #000',
+      'color: #fff',
+      'padding: 10px 20px',
+      'line-height: 35px'
+      ].join(';');
+
+    //Main Data in Build before initad is called//
+    var labAd = {
+      adCond: null,
+      mode: null,
+      meta:{
+        jiraID: 'tcl3965', //Example: The name of the JIRA ID
+  			projectName: 'Polaris X - Q2 22 - Mobile Web Integrated Marquee (Static)', //CVS Stores Preseason (Week Ahead SPON)
+  			advertiser: 'POLARIS', // Ex: 'mcdonalds'
+  			placement: 'im-mw', // Ex: 'ros-shopper-moms'
+        created: '04-07-2022',                     // Ex: '08-23-2018'
+        modified: '',
+        designer: 'cdegroot',                           // Ex: 'coreyd'
+        dev: 'JamesB'                                 // Ex: 'dks'
+      },
+      product:{
+  			name:'MWIM - Mobile Web Integrated Marquee', // Abrev. + Full name of Product
+        version: 'v4.0.4', // - This is built off of v3.2, fixing bugs      //This will reflect the Github Version on the stable branch
+  			type: 'static', // 'static', 'animated'
+  			interactive: '', // EX: 'locator', 'vertical-video', 'swipe-carousel', etc.
+  			adaptor: 'base-conditions',  //EX: 'temp-range', 'temp-comparison', 'countdown', etc.
+  			dimensions:{
+  				ad:{
+  					//default for milli devices
+  					sm: {width:300, height:45},
+
+  					//default for kilo devices
+  					md: {width:300, height:45},
+  					lg: {width:300, height:45},
+  					xl: {width:300, height:45}
+  				},
+  				bgOpen:{
+  					//default for milli devices
+  					sm: {width:375, height:320},
+
+  					//default for kilo devices
+  					md: {width:414, height:354},
+  					lg: {width:375, height:320},
+  					xl: {width:414, height:354}
+  				},
+          bgClosed:{
+  					//default for milli devices
+  					sm: {width:375, height:110},
+
+  					//default for kilo devices
+  					md: {width:414, height:121},
+  					lg: {width:375, height:110},
+  					xl: {width:414, height:121}
+  				},
+  			},
+  			platforms: ['mw']// 'ios', 'android', 'web', 'mw'
+  		},
+      deviceSize:'sm', // sm, md, lg, xl
+      dir: 'https://s.w-x.co/cl/',
+      dpr: window.devicePixelRatio,
+      default: {
+        cnd: 'cld',
+        dynght: 'D',
+        img:'polaris/tcl3965-mw-im-stc/414x121-lockup-default.png', //default img
+        previewMode: 'o',
+        reason:'na' // 'na' is default
+      },
+      displayed: false, // flag indicating showAd or showDefault has executed successfully.
+      els: {},
+      errors: [],
+      history:{
+        activeAds:[], // array of objects describing viewed labAds
+        expiredAds:[], // array of objects found to be past expiration date
+        currentAdRecord:null // object showing ad record properties of this ad - as saved to activeAds
+      },
+      imgs: {},
+      isFirstView: true, // boolean indicating whether this is the first time ad has been viewed today
+      log: logInfo,
+      logLevel: 2, // 0 = none, 1 = labAd, 2 = everything
+      logs: [],
+      macros: { // macros populated by GAM when ad is served
+        cnd: "%%PATTERN:cnd%%", // current condition.
+        dynght: "%%PATTERN:dynght%%", // day or night? Possible values: 'D', 'N'
+        height: "%%HEIGHT%%", // ad slot height - according to inventory
+        width: "%%WIDTH%%", // ad slot width - according to inventory
+        plat: "%%PATTERN:plat%%", // platform. Used for tracking
+        timeframe: "%%PATTERN:tf%%", // timeframe. Used for tracking
+        gamClick: "%%CLICK_URL_UNESC%%", // Google Ad Manager click track URL
+        gamPreview: '%%PREVIEW_MODE%%',
+        cid: "%ecid!", // creative id
+        lid: "%eaid!", // line item id
+        ord: '%%CACHEBUSTER%%'
+      },
+      preview:{
+        css:{id:'previewCSS', href:'preview-mwim-v8.css', dir:'hostedcss'},
+        dirs:{
+          standard:'https://s.w-x.co/cl/im/mw/preview-mode/',
+          hostedcss: 'https://s.w-x.co/cl/im/mw/preview-mode/css/',
+          hostedjs: 'https://s.w-x.co/cl/im/mw/preview-mode/js/',
+          localcss:'preview-mode/css/',
+          localjs:'preview-mode/js/',
+          localassets: 'preview-mode/assets/',
+          custom:'' //TESTING URL VALUE
+        },
+        images:[
+          // NOTE: images.src values use split('-'). Extraneous '-' in filenames will cause issues.
+          // Standard Preview Images & Conditions
+          {id:'logo', type:'logo', src:'all-logo-watson-ads-white.png', dir:'standard'},
+          {id:'device', type:'device', src:'lg-device.png', dir:'standard'},
+          {id:'browser-top-max', type:'browser-top-max', src:'lg-browser-top-max.png', dir:'standard'},
+          {id:'browser-nav', type:'browser-nav', src:'lg-browser-nav.png', dir:'standard'},
+          {id:'site-nav', type:'site-nav', src:'lg-nav-twc-mw.png', dir:'standard'},
+          {id:'ui-clr+D', type:'ui', src:'lg-ui-clear-day.png', dir:'standard'},
+          {id:'ui-clr+N', type:'ui', src:'lg-ui-clear-night.png', dir:'standard'},
+          {id:'ui-cld+D', type:'ui', src:'lg-ui-cloudy-day.png', dir:'standard'},
+          {id:'ui-cld+N', type:'ui', src:'lg-ui-cloudy-night.png', dir:'standard'},
+          {id:'ui-rain+D', type:'ui', src:'lg-ui-rainy-day.png', dir:'standard'},
+          {id:'ui-rain+N', type:'ui', src:'lg-ui-rainy-night.png', dir:'standard'},
+          {id:'ui-snow+D', type:'ui', src:'lg-ui-wintry-day.png', dir:'standard'},
+          {id:'ui-snow+N', type:'ui', src:'lg-ui-wintry-night.png', dir:'standard'}
+        ]
+      },
+      selected: {        // for tracking selected values
+        scenario: 'na'
+      },
+      scope:parent.window, // defaults to parent window. Preview Mode changes to window
+      state: 'na', // defaults to 'na' before being set to 'open' or 'closed' on init.
+      test: {},
+      time: {
+        log:{},
+        stamp:0 // most recent getTime. Updated when logTime is called.
+      },
+      tracking: {
+        clickTag: 'https://ad.doubleclick.net/ddm/clk/524916941;333132567;j', // Ex: clickTag tracker
+        imp3rdParty: 'https://ad.doubleclick.net/ddm/ad/N768926.3958515PMPRECISIONTHETRA/B26999810.333132567;sz=1x1;ord=%%CACHEBUSTER%%;dc_lat=%%ADVERTISING_IDENTIFIER_IS_LAT%%;dc_rdid=%%ADVERTISING_IDENTIFIER_PLAIN%%;tag_for_child_directed_treatment=;tfua=;gdpr=${GDPR};gdpr_consent=${GDPR_CONSENT_755}?', // Ex: 3rd party click tracker
+      }
+    }
+
+    function initAd() {
+      //DISPLAYS VERSION NUMBER IN CONSOLE
+      console.log('%c MWIM v' + labAd.product.version, consoleStyle);
+
+      try {
+        // init date & time
+        labAd.time.date = new Date();
+        logTime('initAd');
+
+        // init labAd props and els - especially those needed for tracking and timing operations
+        labAd.els.labAdDiv = document.getElementById('labAdDiv');
+        labAd.els.labTracking = document.getElementById('labTracking');
+        labAd.els.imContent = document.getElementById('imContent');
+
+        labAd.els.mwimForegroundClosedContent = document.getElementById('mwimForegroundClosedContent');
+        labAd.els.imBtnExpand = document.getElementById('imBtnExpand');
+
+        // request overall tracking.
+        getImpPixel(labAd.tracking.imp3rdParty, 'imp-3rdParty', false);
+        // init handlers based on media queries such as orientation change
+        initMediaQueries();
+
+        // get ad mode to determine if vars populated by macros or test hash
+        labAd.mode = getAdMode();
+
+        // populate vars from the correct source for mode
+        initAdMode(labAd.mode);
+
+        // determine adCond based on cnd and dynght values
+        labAd.adCond = labAd.macros.cnd + '-' + labAd.macros.dynght;
+
+        // check localStorage to see if expanded ad has already been viewed today
+        labAd.history.currentAdRecord = initAdRecords();
+
+        // if this ad's view count is exactly 1, this is a firstView of the ad.
+        labAd.isFirstView = (labAd.history.currentAdRecord.count === 1) ? true : false;
+
+        // if Preview Mode, load external js & css
+        if (labAd.mode === 'preview' || labAd.mode === 'gamPreview') {
+          // load resources needed for Preview Mode, then init Preview Mode.
+          getPreviewResources();
+
+          labAd.els.labAdDiv.style.position = 'absolute';
+
+        }else{
+          // Resume ad display routine - with fileSelection
+          labAd.selected = fileSelection(labAd.adCond);
+        }
+
+      } catch (err) {
+        labAd.log({label: 'initAd error: ', detail: err, type: 'error', isFatal: true });
+      }
+    }
+
+    function initAdMode(sMode){
+      try {
+        var result = '';
+        // Cases below should define adjustments needed for test modes supported by ad.
+        switch (sMode) {
+          case 'preview':
+          case 'gamPreview':
+            // clear GAM click macro so clicks will work in test modes
+            labAd.macros.gamClick = "";
+            // assign values from HashParts - hash order is adstest + cnd + dynght + deviceSize + DPR + previewMode
+            labAd.macros.cnd = labAd.test.HashParts[1];
+            labAd.macros.dynght = labAd.test.HashParts[2].toUpperCase();
+            labAd.deviceSize = labAd.test.HashParts[3].toLowerCase();
+
+            // get dpr from hash if not undefined, otherwise use window property
+            labAd.dpr = (labAd.test.HashParts[4] != undefined) ? Number(labAd.test.HashParts[4]) : window.devicePixelRatio;
+            // TODO: add new adstest param to force state instead of using
+            // frequency cap? Or, this new value could have it obey the cap by
+            // default but allow it to be ignored in favor of the other values
+            // - only in Preview Mode though!
+
+            break;
+          default: // covers 'live' and 'none'
+            labAd.deviceSize = getDeviceSize();
+            break;
+        }
+
+        // log result
+        result = labAd.mode + ' activated';
+        labAd.log({label: 'initAdMode ', detail: result, type: 'log' });
+      } catch (err) {
+        labAd.log({label: 'initAdMode error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+
+    function initAdRecords(){
+      try {
+        var thisAdRecord = null;
+        // check localStorage for 'allLabAds' which is an array of record objects for each labAd viewed on this browser/UserAgent
+
+        // attempt to get array of objects containing details on previously viewed labAds.
+        labAd.history.activeAds = JSON.parse(localStorage.getItem('allLabAds'));
+        if (labAd.history.activeAds !== null) {
+          // iterate the array looking for 2 things:
+          labAd.history.activeAds.forEach(function(ad, index){
+            var adMatchType = null;
+            // 1: if there's an existing match (name, cid and viewed string all match) to this ad, update existing record -
+            if (ad.name === labAd.meta.advertiser && ad.cid === labAd.macros.cid && ad.viewed === labAd.time.date.toDateString()) {
+              // found match based on name, cid and date viewed
+              adMatchType = 'live';
+            }else if (ad.name === labAd.meta.advertiser + '-' + labAd.adCond && ad.cid === labAd.macros.cid && ad.viewed === labAd.time.date.toDateString()) {
+              // found match based on preview mode logic which combines adv name + '-' + labAd.adCond, cid and date viewed
+              adMatchType = 'preview';
+            }
+
+            // if a match was found for the current ad mode, we need to update the matched record with new details
+            if (adMatchType != null && labAd.mode === adMatchType) {
+              // increment count, update expires and viewed dates and flag
+              ad.count ++;
+              // create a time formula var equal to 7 days for live ads but only 1 minute when testing.
+              var expTimeFormula = (labAd.mode === 'live') ? 7 * 24 * 60 * 60 * 1000 : 1 * 60 * 1000;
+              // set the expires time using the expiration formula
+              ad.expires = labAd.time.date.getTime() + expTimeFormula;
+              // include a toLocaleString version of the date to make it human readable
+              ad.expireStr = new Date(ad.expires).toLocaleString();
+              // capture today's date as a date string. Note: this IS the actual value used to determine if the ad has been viewed on the current day.
+              // No need for any more complex date comparison than checking for the same date string.
+              ad.viewed = labAd.time.date.toDateString();
+
+              var info = {adRecord: ad, matchType:adMatchType, expFormula:expTimeFormula};
+              labAd.log({label:'getAdRecord: updating existing record - ' + index, detail: info, type: 'log' });
+              // after the updates, pass this ad to setAdRecord to assign thisAdRecord
+              thisAdRecord = setAdRecord(ad);
+            }
+
+            // 2: drop records that are past the date in the expires property.
+            if (ad.expires !== null && ad.expires < new Date().getTime()) {
+              labAd.history.expiredAds.push(ad);
+              labAd.log({label:'getAdRecord: expired record found at index: ' + index, detail: ad, type: 'log' });
+            }
+          });
+
+          // filter out the dropped records from activeAds
+          labAd.history.filteredAds = labAd.history.activeAds.filter(function(value, index, arr){
+            // generate a new array by keeping activeAds that do not appear in the expiredAds array
+            return labAd.history.expiredAds.indexOf(value) < 0;
+          });
+
+          // overwrite activeAds with the filteredAds so the final localStorage
+          // save at the end of the function only keeps the non-expired ads
+          labAd.history.activeAds = labAd.history.filteredAds;
+        } else {
+          // if no localStorage record is found, activeAds is set to null so we
+          // must convert labAd.history.activeAds from null back to array since
+          // a newly created record will be pushed to activeAds which is ultimately
+          // stringified and saved to localStorage
+          labAd.history.activeAds = [];
+        }
+
+        // if thisAdRecord is still null, 'allLabAds' existed but
+        // there was no matching record to update.
+        if (thisAdRecord === null) {
+          // create a new record using standard values
+          thisAdRecord = setAdRecord();
+          // add the newly created ad record to activeAds
+          labAd.history.activeAds.push(thisAdRecord);
+        }
+
+        // save the updated activeAds list with the new and/or updated record(s)
+        localStorage.setItem('allLabAds', JSON.stringify(labAd.history.activeAds));
+
+        // log results
+        labAd.log({label: 'initAdRecords ', detail: labAd.history, type: 'log' });
+
+        // return thisAdRecord
+        return thisAdRecord;
+      } catch (err) {
+        labAd.log({label: 'initAdRecords error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function initDisplay(sCond){
+      logTime('initDisplay');
+      try {
+        // start the display routine by:
+          // moving HTML & CSS to target div on parent or in Preview Mode
+          // apply initial images
+          // assigning behaviors
+
+        // assign deviceSize as className for styling inheritance
+        labAd.els.labAdDiv.classList.add(labAd.deviceSize);
+
+        // moving HTML structure to target div on parent or in Preview Mode
+        if (labAd.mode === 'preview' || labAd.mode === 'gamPreview') {
+          // if Preview Mode, move #labAdDiv to #previewAdContainer in right column
+          labAd.els.imTargetDiv = labAd.els.previewAdContainer;
+          labAd.els.imTargetDiv.appendChild(labAd.els.labAdDiv);
+        }else{
+          // else use parent.regionTopAds
+          labAd.els.imTargetDiv = parent.document.querySelector('.regionTopAds');
+          // var rta = parent.document.querySelector('.regionTopAds');
+            // 1. hide everything inside
+            var rtaNodes = labAd.els.imTargetDiv.querySelectorAll('div');
+            rtaNodes.forEach(function(el){el.style.display = 'none'});
+            // 2. place #imCSS
+            labAd.els.imCSS = document.querySelector('#imCSS');
+            labAd.els.imTargetDiv.appendChild(labAd.els.imCSS);
+            // 3. place #labAdDiv & structure
+            labAd.els.imTargetDiv.appendChild(labAd.els.labAdDiv);
+
+        }
+
+        // assign image src & behaviors to the initially loaded images
+        initEls(labAd.selected.imgsInitial);
+
+        // IM is now ready for initial reveal!
+          // Based on isFirstView, set initial value of labAd.state and
+          // set corresponding initial visibility of els.
+          if (labAd.isFirstView) {
+            labAd.state = 'open';
+            labAd.els.imClosed.classList.add("lab-hidden");
+            // listen for scroll change to close ad
+            labAd.scope.addEventListener("scroll", monitorScroll, false);
+          } else {
+            labAd.state = 'closed';
+            labAd.els.imOpen.classList.add("lab-hidden");
+            labAd.els.imTargetDiv.classList.add("closed");
+          }
+
+        // Finally, apply deviceSize className to target div to reveal IM
+        // When live, this resizes regionTopAds to display IM
+        labAd.els.imTargetDiv.classList.add(labAd.deviceSize);
+
+        var info = {isFirstView:labAd.isFirstView, isLandscape:labAd.mq.isLandscape.matches, state:labAd.state, sz:labAd.deviceSize};
+        labAd.log({label: 'initDisplay ', detail: info, type: 'log' });
+      } catch (err) {
+        labAd.log({label: 'initDisplay error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function initEls(imgMap){
+      try {
+        // After moving the els to the final location, it's the right time to
+        // apply loaded images and handlers to their respective elements. since
+        // all of these els were mapped based on the data-img attribute, theyre
+        // all assumed to be images - so src is the first thing to apply.
+        // If the el also has a data-click attribute, assign the handler indicated.
+
+        // TODO: redo imgMap as elMap and include an elType property so it can
+        // be used to apply images as BG & behaviors to non-images.
+
+        imgMap.forEach(function(obj){
+          // get ref to el placed in final location (after moving)
+          labAd.els[obj.id] = labAd.scope.document.getElementById(obj.id);
+          var el = labAd.els[obj.id];
+          // apply the image src
+          el.src = obj.src;
+
+          // if the el has the data-click custom attribute, assign click handler
+          if (el.getAttribute('data-click')){
+            // assign handler indicated by data-click attribute in the proper scope
+            // // NOTE: proper scope for the function may be in the ad frame - this
+            // would require an adjustment to the line below.
+            // labAd.els[el.id].onclick = labAd.scope[el.getAttribute('data-click')];
+            labAd.els[el.id].onclick = window[el.getAttribute('data-click')];
+          }
+        });
+
+        labAd.log({label: 'initEls ', detail: imgMap, type: 'log' });
+      } catch (err) {
+        labAd.log({label: 'initEls error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function initMediaQueries(){
+      try {
+        // if device supports matchMedia, define CSS media queries tests that
+        // JS can listen for and respond to onchange. All stored under labAd.mq
+        if (matchMedia) {
+          // MediaQueryList objects for js testing/handling
+          labAd.mq = {};
+          // media query test for landscape orientation
+          labAd.mq.isLandscape = labAd.scope.matchMedia('(orientation: landscape)');
+          // NOTE: Safari does NOT support listeners for MediaQueryList at this
+          // time (08/19) so we have to control when to check for matches - like
+          // checking to see what the orientation is when ad is initially loaded.
+          labAd.log({label: 'initMediaQueries: matchMedia available! ', detail: labAd.mq, type: 'log' });
+        }else{
+          labAd.log({label: 'initMediaQueries: matchMedia not supported! ', detail: labAd.mq, type: 'log' });
+          throw 'matchMedia is not supported.'
+        }
+      } catch (err) {
+        labAd.log({label: 'initMediaQueries error: ', detail: err, type: 'error', isFatal: true });
+      }
+    }
+
+    function diagnosticAlert(alertObj){
+      try {
+        // diagnosticAlert will stringify & alert the passed alertObj. This makes
+        // it possible to alert specific properties rather than having to scroll
+        // through all the labAd properties that arent relevant to the diagnosis.
+        alert(JSON.stringify(alertObj, null, 1));
+        labAd.log({label: 'diagnosticAlert ', detail: alertObj, type: 'log' });
+      } catch (err) {
+        labAd.log({label: 'diagnosticAlert error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function exitClick(event) {
+      try {
+        event.preventDefault();
+        var id = event.target.id;
+        var url = labAd.tracking.clickTag;
+        var target = "_blank";
+        var clickTime = logTime('exitClick');
+        var btnPos = event.target.getBoundingClientRect();
+
+        labAd.log({label: 'exitClick from: ' + id, detail: url, type: 'log' });
+
+        // launch clickthrough window
+        window.open(labAd.macros.gamClick + url, target);
+
+        // var alertProps = {errors: labAd.errors, macros: labAd.macros, history: labAd.history, clickProps: trackObj };
+        // diagnosticAlert(alertProps);
+
+      } catch (err) {
+        labAd.log({label: 'exitClick error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+
+    function fileSelection(sCond){
+      // description:
+        // 1. Creates a condition map for all dynamic images.
+        // 2. Adjusts mapping values for supported conditions.
+        // 3. Selects which files to load first based on firstView status
+        // (frequency cap) and orientation.
+        // 4. Create multiple image batches and start loading the first one
+        // - which will callback to initDisplay to apply the images and
+        // complete the initial display - possibly starting a secondary mag batch
+      try {
+        // return object contains an array of selected images and a string description of the scenario
+        var selected = {scenario: ''};
+
+      ///////////////////////////////////////////////////
+      // 1. Create "Condition Map" for dynamic images. //
+      ///////////////////////////////////////////////////
+        // This map is an Object with property names equal
+        // to the ID of each element. The default value assigned
+        // when the map obj is created should be the default
+        // value (default img) for that element. Then, simply
+        // re-assign the value for any case(s) requiring a
+        // differnt img src.
+        labAd.imgs.cndMap = {
+          mwimOpenContent: 'polaris/tcl3965-mw-im-stc/414x354-open-cld-d.jpg',   // 414x354 Open - BG (Background element)
+          mwimForegroundContent: 'polaris/tcl3965-mw-im-stc/414x354-lockup-open.png',   // 414x354 Open-LockUp-FG (Foreground element)
+          mwimClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-cld-d.jpg',  // 414x121 closed - BG (Background element)
+          mwimForegroundClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed-LockUp-FG (Foreground element)
+
+          mwimForegroundLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed - BG (Background element)
+          mwimLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-cld-d.jpg' // 414x121 closed-LockUp-FG (Foreground element)
+        };
+
+      ///////////////////////////////////////
+      // 2. Adjust cndMap values by adCond //
+      ///////////////////////////////////////
+
+        // Product BG images are based on wx adCond
+        switch (sCond) {
+          case 'cld-D'://Cloudy Day
+          case 'pcld-D'://Partly Cloudy Day
+            selected.scenario = 'Cloudy Day';
+            // cloudy day BG is default
+
+            break;
+          case 'cld-N'://Cloudy Night
+          case 'pcld-N'://Partly Cloudy Night
+            selected.scenario = 'Cloudy Night';
+            labAd.imgs.cndMap = {
+              mwimOpenContent: 'polaris/tcl3965-mw-im-stc/414x354-open-cld-n.jpg',   // 414x354 Open - BG (Background element)
+              mwimForegroundContent: 'polaris/tcl3965-mw-im-stc/414x354-lockup-open.png',   // 414x354 Open-LockUp-FG (Foreground element)
+              mwimClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-cld-n.jpg',  // 414x121 closed - BG (Background element)
+              mwimForegroundClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed-LockUp-FG (Foreground element)
+
+              mwimForegroundLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed - BG (Background element)
+              mwimLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-cld-n.jpg' // 414x121 closed-LockUp-FG (Foreground element)
+            };
+            break;
+          case 'clr-D'://Clear Day
+          case 'sun-D'://Sunny Day
+            selected.scenario = 'Clear Day';
+            labAd.imgs.cndMap = {
+              mwimOpenContent: 'polaris/tcl3965-mw-im-stc/414x354-open-clr-d.jpg',   // 414x354 Open - BG (Background element)
+              mwimForegroundContent: 'polaris/tcl3965-mw-im-stc/414x354-lockup-open.png',   // 414x354 Open-LockUp-FG (Foreground element)
+              mwimClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-clr-d.jpg',  // 414x121 closed - BG (Background element)
+              mwimForegroundClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed-LockUp-FG (Foreground element)
+
+              mwimForegroundLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed - BG (Background element)
+              mwimLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-clr-d.jpg' // 414x121 closed-LockUp-FG (Foreground element)mwimLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-bg-gridline-closed-bg.jpg' // 414x121 closed-LockUp-FG (Foreground element)
+            };
+            break;
+          case 'clr-N'://Clear Night
+          case 'sun-N'://Sunny Night
+            selected.scenario = 'Clear Night';
+            labAd.imgs.cndMap = {
+              mwimOpenContent: 'polaris/tcl3965-mw-im-stc/414x354-open-clr-n.jpg',   // 414x354 Open - BG (Background element)
+              mwimForegroundContent: 'polaris/tcl3965-mw-im-stc/414x354-lockup-open.png',   // 414x354 Open-LockUp-FG (Foreground element)
+              mwimClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-clr-n.jpg',  // 414x121 closed - BG (Background element)
+              mwimForegroundClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed-LockUp-FG (Foreground element)
+
+              mwimForegroundLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed - BG (Background element)
+              mwimLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-clr-n.jpg' // 414x121 closed-LockUp-FG (Foreground element)
+            };
+            break;
+          case 'rain-D'://Rainy Day
+          case 'thdr-D'://Stormy/Thunder Day
+            selected.scenario = 'Rainy/Stormy Day';
+            labAd.imgs.cndMap = {
+              mwimOpenContent: 'polaris/tcl3965-mw-im-stc/414x354-open-rain-d.jpg',   // 414x354 Open - BG (Background element)
+              mwimForegroundContent: 'polaris/tcl3965-mw-im-stc/414x354-lockup-open.png',   // 414x354 Open-LockUp-FG (Foreground element)
+              mwimClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-rain-d.jpg',  // 414x121 closed - BG (Background element)
+              mwimForegroundClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed-LockUp-FG (Foreground element)
+
+              mwimForegroundLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed - BG (Background element)
+              mwimLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-rain-d.jpg' // 414x121 closed-LockUp-FG (Foreground element)
+            };
+            break;
+          case 'rain-N'://Rainy Night
+          case 'thdr-N'://Stormy/Thunder Night
+            selected.scenario = 'Rainy/Stormy Night';
+            labAd.imgs.cndMap = {
+              mwimOpenContent: 'polaris/tcl3965-mw-im-stc/414x354-open-rain-n.jpg',   // 414x354 Open - BG (Background element)
+              mwimForegroundContent: 'polaris/tcl3965-mw-im-stc/414x354-lockup-open.png',   // 414x354 Open-LockUp-FG (Foreground element)
+              mwimClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-rain-n.jpg',  // 414x121 closed - BG (Background element)
+              mwimForegroundClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed-LockUp-FG (Foreground element)
+
+              mwimForegroundLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed - BG (Background element)
+              mwimLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-rain-n.jpg' // 414x121 closed-LockUp-FG (Foreground element)
+            };
+            break;
+
+          case 'snow-D'://Wintery Day
+          case 'ice-D': //Ice Day
+            selected.scenario = 'Wintry/Icy Day';
+            labAd.imgs.cndMap = {
+              mwimOpenContent: 'polaris/tcl3965-mw-im-stc/414x354-open-snow-d.jpg',   // 414x354 Open - BG (Background element)
+              mwimForegroundContent: 'polaris/tcl3965-mw-im-stc/414x354-lockup-open.png',   // 414x354 Open-LockUp-FG (Foreground element)
+              mwimClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-snow-d.jpg',  // 414x121 closed - BG (Background element)
+              mwimForegroundClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed-LockUp-FG (Foreground element)
+
+              mwimForegroundLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed - BG (Background element)
+              mwimLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-snow-d.jpg' // 414x121 closed-LockUp-FG (Foreground element)
+            };
+            break;
+          case 'snow-N'://Wintery Night
+          case 'ice-N': //Ice Night
+            selected.scenario = 'Wintry/Icy Night';
+            labAd.imgs.cndMap = {
+              mwimOpenContent: 'polaris/tcl3965-mw-im-stc/414x354-open-snow-n.jpg',   // 414x354 Open - BG (Background element)
+              mwimForegroundContent: 'polaris/tcl3965-mw-im-stc/414x354-lockup-open.png',   // 414x354 Open-LockUp-FG (Foreground element)
+              mwimClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-snow-n.jpg',  // 414x121 closed - BG (Background element)
+              mwimForegroundClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed-LockUp-FG (Foreground element)
+
+              mwimForegroundLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed - BG (Background element)
+              mwimLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-snow-n.jpg' // 414x121 closed-LockUp-FG (Foreground element)
+            };
+            break;
+
+          default:
+
+            //Kylie Prevatt - 03/31/22
+            //Added conditional logic to display correct D/N version of default creative
+            if (labAd.macros.dynght == 'n' || labAd.macros.dynght == 'N'){
+              selected.scenario = 'Default Night Condition: '+ sCond;
+              labAd.imgs.cndMap = {
+                mwimOpenContent: 'polaris/tcl3965-mw-im-stc/414x354-open-cld-n.jpg',   // 414x354 Open - BG (Background element)
+                mwimForegroundContent: 'polaris/tcl3965-mw-im-stc/414x354-lockup-open.png',   // 414x354 Open-LockUp-FG (Foreground element)
+                mwimClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-cld-n.jpg',  // 414x121 closed - BG (Background element)
+                mwimForegroundClosedContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed-LockUp-FG (Foreground element)
+
+                mwimForegroundLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-lockup-closed.png', // 414x121 closed - BG (Background element)
+                mwimLandscapeContent: 'polaris/tcl3965-mw-im-stc/414x121-closed-cld-n.jpg' // 414x121 closed-LockUp-FG (Foreground element)
+              };
+            } else {
+              selected.scenario = 'Default Day Condition: '+ sCond;
+            }
+
+            break;
+        }
+
+        // HACK: to set the landscape content = to closed content decided above
+        labAd.imgs.cndMap.mwimForegroundLandscapeContent = labAd.imgs.cndMap.mwimForegroundClosedContent;
+
+        var rta2 = parent.document.querySelector('.regionTopAds');
+       if (rta2 != null) {
+         var rta2Props = rta2.getBoundingClientRect();
+         if (rta2Props.width <= 325) {
+             labAd.els.mwimForegroundClosedContent.style.cssText = ' width: auto !important; max-width: 100% !important; max-height: 100% !important;'
+              labAd.els.imBtnExpand.style.cssText = ' position: absolute; bottom: 20px; left: 0; right: 0; width: 102px; z-index: 5 ; cursor: pointer;'
+          }
+       }
+
+      /////////////////////////////////////////
+      // 3: Select files for initial display //
+      /////////////////////////////////////////
+        // The following technique allows us to only preload files required for
+        // the initial ad state that will be displayed. So, if this is a firstView
+        // we would load the Open state files. Otherwise, we only preload either
+        // the Closed state or (rarely) the Landscape files
+
+
+
+        // get image maps for each of the IM states
+        labAd.imgs.imOpenMap = getImgMap('imOpen');
+        labAd.imgs.imClosedMap = getImgMap('imClosed');
+        labAd.imgs.imLandscapeMap = getImgMap('imLandscape');
+
+        // prioritize the initial and polite load images
+        if (labAd.mq.isLandscape.matches) {
+          // load landscape first since that trumps everything - except in preview mode where it should be ignored
+          selected.imgsInitial = labAd.imgs.imLandscapeMap;
+          // combine the other maps to get the list of imgs to load politely
+          selected.imgsPolite = labAd.imgs.imOpenMap.concat(labAd.imgs.imClosedMap);
+        } else if(labAd.isFirstView) {
+          // get open images for firstView
+          selected.imgsInitial = labAd.imgs.imOpenMap;
+          // combine the other maps to get the list of imgs to load politely
+          selected.imgsPolite = labAd.imgs.imLandscapeMap.concat(labAd.imgs.imClosedMap);
+        }else{
+          // otherwise get closed images first
+          selected.imgsInitial = labAd.imgs.imClosedMap;
+          // combine the other maps to get the list of imgs to load politely
+          selected.imgsPolite = labAd.imgs.imLandscapeMap.concat(labAd.imgs.imOpenMap);
+        }
+
+        labAd.imgs.batch = {};
+        // start loading the initial image batch - with success callback that
+        // that calls initDisplay and starts to polite load the remaining images.
+        labAd.imgs.batch.initial = {
+            name: 'initialImages',
+            imgs: selected.imgsInitial,
+            maxLoadTime: 3000,
+            cbSuccess: function(evt){
+              // start loading the polite images
+              imgBatchLoad(labAd.imgs.batch.polite);
+              // since initial files are loaded, start display of initial state
+              initDisplay();
+
+              // log results
+              labAd.log({label: 'initialImages loaded ', detail: labAd.imgs.initialImages, type: 'log' });
+            },
+            cbFail: function(err){
+              labAd.log({label: 'initialImages error: ', detail: err, type: 'error', isFatal: true });
+            }
+          };
+
+          // define the polite batch details
+        labAd.imgs.batch.polite = {
+            name: 'politeImages',
+            imgs: selected.imgsPolite,
+            maxLoadTime: 3000,
+            cbSuccess: function(evt){
+              // assign imgs & handlers for polite loaded els
+              initEls(labAd.selected.imgsPolite);
+              // log results
+              labAd.log({label: 'politeImages loaded ', detail: labAd.imgs.politeImages, type: 'log' });
+            },
+            cbFail: function(err){
+              labAd.log({label: 'politeImages error: ', detail: err, type: 'error', isFatal: true });
+            }
+          };
+
+          // load the initial image batch
+          imgBatchLoad(labAd.imgs.batch.initial);
+
+        // log results
+        labAd.log({label: 'fileSelection ', detail: selected, type: 'log' });
+
+        ///////////////////////////////////
+        // 4: return object with details //
+        ///////////////////////////////////
+        return selected;
+      } catch (err) {
+        labAd.log({label: 'fileSelection error: ', detail: err, type: 'error', isFatal: true });
+      }
+    }
+
+    function getImpPixel(sURL, sEventName) {
+      try {
+        var regexp = /(https?:\/\/[^\s]+)/g; // begins with http:// or https://
+        if (regexp.exec(sURL)) {
+          // if url is valid, add tracking pixel to labTracking
+          var pixel = document.createElement('img');
+          pixel.src = sURL;
+          pixel.alt = sEventName;
+          // add new img to tracking div
+          labAd.els.labTracking.appendChild(pixel);
+
+          // log success
+          labAd.log({label: 'getImpPixel: ' + sEventName, detail: pixel, type: 'log' });
+        } else {
+          // log error for invalid URL.
+          var eO = {message:'sEventName: ' + sEventName};
+          labAd.log({label: 'getImpPixel - invalid URL: ' + sURL, detail: eO, type: 'error', isFatal: false });
+        }
+      } catch (err) {
+        labAd.log({label: 'getImpPixel error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function getAdMode() {
+      try {
+        labAd.test.HashParts = getTestHash();
+        // if the zero index === adstest, we go into test mode
+        if (labAd.test.HashParts[0] === "adstest") {
+            labAd.test.mode = 'preview';
+        } else if (labAd.macros.gamPreview === 'true') { // Macro will return true for GAM Creative Preview. Original macro token will be intact during local dev.
+            labAd.test.mode = 'gamPreview';
+        } else if (labAd.macros.cid.indexOf('ecid') === -1) { // Macro will replace 'ecid' with creative id string indicating ad has been served by GAM.
+            labAd.test.mode = 'live';
+        } else {
+            labAd.test.mode = 'none';
+        }
+
+        labAd.log({label: 'getAdMode: ' + labAd.test.mode, detail: labAd.test, type: 'log' });
+        return labAd.test.mode;
+      } catch (err) {
+        labAd.log({label: 'getAdMode error: ', detail: err, type: 'error', isFatal: true });
+      }
+    }
+
+    function getDeviceSize(){
+      try {
+        // NOT USED FOR Preview Mode: return a value for labAd.deviceSize based on the getBoundingClientRect
+        // properties of the target div the IM will be placed into - which will
+        // ALWAYS be parent.regionTopAds.
+
+        /* Size key:
+          sm = 375x667 = iPhone 6/6s/7/8 - aka - rg = regular
+          md = 414x736 = iPhone Plus
+          lg = 375x812 = iPhone X/Xs
+          xl = 414x896 = iPhone Xr/Xs-Max
+        */
+
+        // TODO: find out if there's a better way to determine device size based
+        // ad call params.
+
+        var sz = 'sm'; // always defaults to small
+        // use parent.regionTopAds
+        var rta = parent.document.querySelector('.regionTopAds');
+        if (rta != null) {
+          var rtaProps = rta.getBoundingClientRect();
+          // for now, just determine if the width is >= 414 since there is no
+          // difference in the IM layout/size other than the width.
+          if (rtaProps.width >= 414) { // if 414 or greater, it's md or xl
+            // if the ad is already in test mode with size set to medium, keep it. Otherwise, use 'xl'
+            sz = (labAd.mode === 'preview' || labAd.mode === 'gamPreview' && labAd.deviceSize === 'md') ? 'md' : 'xl';
+          }else{ // less than 414 is 'sm' or 'lg' - which should both be 375 width
+            // if the ad is already in test mode with size set to medium, keep it. Otherwise, use 'xl'
+            sz = (labAd.mode === 'preview' || labAd.mode === 'gamPreview' && labAd.deviceSize === 'sm') ? 'sm' : 'lg';
+          }
+          labAd.log({label: 'getDeviceSize ', detail: {'sz':sz, 'props':rtaProps}, type: 'log' });
+        }else{
+          labAd.log({label: 'getDeviceSize::::::::: regionTopAds ia null!!!! ', detail: {'sz':sz, 'props':rtaProps}, type: 'log' });
+        }
+
+        // return sz whether it was changed or not
+        return sz;
+      } catch (err) {
+        labAd.log({label: 'getDeviceSize error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function getImgMap(sId){
+      try {
+        // getImgMap: uses the string id of the container element to create a
+        // NodeList of valid images for that container, then processes each img
+        // and maps it to an array of objects that can be used for batch loading
+        // and placement.
+
+        // create el reference & NodeList for the passed id
+        labAd.els[sId] = document.getElementById(sId);
+        labAd.imgs[sId + 'NodeList'] = labAd.els[sId].querySelectorAll('div, img');
+
+        // array for housing all the img map objects that
+        var aImgMap = [];
+
+        // iterate the NodeList looking for els with 'data-img' custom attribute
+        labAd.imgs[sId + 'NodeList'].forEach(function(el){
+          // process the cust attribute value to get the img src
+          if (el.getAttribute('data-img')) {
+            aImgMap.push(imgObj(el.id, el.getAttribute('data-img')));
+          }
+        });
+
+        // return the img map array
+        labAd.log({label: 'getImgMap '+ sId, detail: aImgMap, type: 'log' });
+        return aImgMap;
+      } catch (err) {
+        labAd.log({label: 'getImgMap error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function getPreviewResources(){
+      try {
+        // register loader method, then create Promise to load resource files
+        // and init Preview Mode when resolved.
+        labAd.preview.loadResources = (function() {
+          // Function which returns a function: https://davidwalsh.name/javascript-functions
+          function _load(tag) {
+            return function(url) {
+              // This promise will be used by Promise.all to determine success or failure
+              return new Promise(function(resolve, reject) {
+                var element = document.createElement(tag);
+                var parent = 'body';
+                var attr = 'src';
+
+                // Important success and error for the promise
+                element.onload = function() {
+                  resolve(url);
+                };
+                element.onerror = function(err) {
+                  reject(err);
+                };
+
+                // Need to set different attributes depending on tag type
+                switch(tag) {
+                  case 'script':
+                    element.async = true;
+                    break;
+                  case 'link':
+                    element.type = 'text/css';
+                    element.rel = 'stylesheet';
+                    attr = 'href';
+                    parent = 'head';
+                }
+
+                // Inject into document to kick off loading
+                element[attr] = url;
+                document[parent].appendChild(element);
+              });
+            };
+          }
+
+          return {
+            css: _load('link'),
+            js: _load('script'),
+            img: _load('img')
+          }
+        })();
+
+        // register Promise to load resources and execute based on success or failure
+        labAd.preview.prom = Promise.all([
+          labAd.preview.loadResources.js(labAd.preview.dirs['hostedjs'] +'preview.js'),
+          labAd.preview.loadResources.css(labAd.preview.dirs[labAd.preview.css.dir] + labAd.preview.css.href)
+          // labAd.preview.loadResources.js('preview-mode/preview.js'),
+          // labAd.preview.loadResources.css('preview-mode/preview.css')
+        ]).then(function(result) {
+          labAd.log({label: 'Preview Mode files loaded. ', detail: result, type: 'log' });
+          labAd.preview.init();
+        }).catch(function(err) {
+          labAd.log({label: 'Preview Mode file load error: ', detail: err, type: 'error', isFatal: true });
+        });
+
+        labAd.log({label: 'getPreviewResources ', detail: 'getPreviewResources', type: 'log' });
+      } catch (err) {
+        labAd.log({label: 'getPreviewResources error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function getTestHash(){
+      try {
+        // expected format & order #adstest + cnd + dynght + deviceSize + dpr
+        labAd.test.hashStr = top.window.location.hash.substring(1);
+        // if this is a local file or gamPreview ith no adstest hash, assign default
+        // hashStr value to eliminate need to manually add it to url
+        if ((top.window.location.protocol === 'file:' || labAd.macros.gamPreview === 'true') && labAd.test.hashStr.indexOf('adstest') == -1) {
+          // build array of default values mapped to labAd props so changes are automatically picked up here
+          labAd.test.defaultHashParts = ['adstest', labAd.default.cnd, labAd.default.dynght, labAd.deviceSize, labAd.dpr, labAd.default.previewMode,];
+          // set the missing hash by joining parts of this array to assemble default adstest hash string
+          top.window.location.hash = labAd.test.defaultHashParts.join('+');
+          // now get and use the hashtring
+          labAd.test.hashStr = top.window.location.hash.substring(1);
+          labAd.log({label: 'getTestHash defaultHashParts', detail: labAd.test.defaultHashParts, type: 'log' });
+        }
+        // split hash string on '+' delimiter
+        labAd.test.hashArray = labAd.test.hashStr.split("+");
+        // validate by filtering out empty values: "", undefined
+        labAd.test.hashArrayFiltered = labAd.test.hashArray.filter(function (el) {
+          return el != null && el != "";
+        });
+
+        labAd.log({label: 'getTestHash ', detail: labAd.test.hashArrayFiltered, type: 'log' });
+        // return validated and sanitized array of #adstest hash values
+        return labAd.test.hashArrayFiltered;
+      } catch (err) {
+        labAd.log({label: 'getTestHash error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function imgBatchLoad(imgBatch){
+        try {
+          // store latest batch in labAd.imgs and add additional loader properties
+          labAd.imgs[imgBatch.name] = {
+            cb: imgBatch.cbSuccess,
+            cbFail: imgBatch.cbFail,
+            cbFailFired: false,     // flag to ensure callback only fires once if multiple failures in batch
+            loadCount: 0,
+            loadTimer: 0,
+            loadTimeMax: imgBatch.maxLoadTime,
+            loaded: [],
+            toLoad: imgBatch.imgs
+          };
+          // start timer for max allowed time for ALL images in batch to load
+          labAd.imgs[imgBatch.name].loadTimer = setTimeout(function() {
+            var eO = {message:labAd.imgs[imgBatch.name].loadTimeMax + 'ms max load time exceeded.'};
+            labAd.log({label: 'imgBatchLoad timeout: '+ imgBatch.name + ' - ', detail: eO, type: 'error', isFatal: false });
+            // set reason and show static default
+            labAd.default.reason = 'imgBatchLoad - '+ imgBatch.name + '- max load time exceeded';
+            if (!labAd.imgs[imgBatch.name].cbFailFired) {
+              labAd.imgs[imgBatch.name].cbFailFired = true; // set flag so cbFail can only fire once per batch
+              labAd.imgs[imgBatch.name].cbFail(labAd.default.reason);         // execute failure callback
+            }
+          }, labAd.imgs[imgBatch.name].loadTimeMax);
+
+          // load each img with load and error handlers
+          for (var i = 0; i < imgBatch.imgs.length; i++) {
+              var imgObj = new Image();
+              imgObj.id = imgBatch.imgs[i].id; // apply id assigned by imgObj step. This used for JS/CSS hook when img added to DOM in showAd.
+              if (imgBatch.imgs[i].src.indexOf("://") == -1) { // prepend dir when its only the img name
+                  imgObj.src = labAd.dir + imgBatch.imgs[i].src;
+              } else { // use full path
+                  imgObj.src = imgBatch.imgs[i].src;
+              }
+              imgObj.onload = function(){
+                labAd.imgs[imgBatch.name].loadCount++;
+                labAd.imgs[imgBatch.name].loaded.push(this);
+                if (labAd.imgs[imgBatch.name].loadCount === labAd.imgs[imgBatch.name].toLoad.length) { // if all imgs loaded
+                  clearInterval(labAd.imgs[imgBatch.name].loadTimer);
+                  labAd.log({label: 'imgBatchLoad complete: '+ imgBatch.name, detail: labAd.imgs[imgBatch.name], type: 'log' });
+                  // check flag to make sure showDefault hasnt already been called
+                  labAd.imgs[imgBatch.name].cb(labAd.imgs[imgBatch.name].loaded); // execute callback function - pass array of loaded images
+                }
+              };
+              imgObj.onerror = function(err){
+                clearInterval(labAd.imgs[imgBatch.name].loadTimer);
+                labAd.log({label: 'imgBatchLoad - '+ imgBatch.name + ' - error: ' + err.target.src, detail: err, type: 'error', isFatal: false });
+                // set reason and show static default
+                labAd.default.reason = 'imgBatchLoad - '+ imgBatch.name + ' - error: ' + err.target.src;
+                if (!labAd.imgs[imgBatch.name].cbFailFired) {
+                  labAd.imgs[imgBatch.name].cbFailFired = true; // set flag so cbFail can only fire once
+                  labAd.imgs[imgBatch.name].cbFail(labAd.default.reason);         // execute failure callback
+                }
+              };
+          }
+        } catch (err) {
+            labAd.log({label:'imgBatchLoad error on batch: '+ imgBatch.name +' - ', detail: err, type: 'error', isFatal: true });
+        }
+    }
+
+    function imgDPR(sFilename) {
+      try {
+        // apply img name based on devicePixelRatio (or argument representing dpr)
+        // assuming all base filenames should contain '@1x'
+        var imgName = decodeURIComponent(sFilename);
+        var adjusted = 'not adjusted.';
+
+        if (imgName.indexOf('@') != -1) { // if decoded filename contains @ symbol
+          // make DPR adjustments using string replacement
+          if (labAd.dpr > 2) {
+            // triple density
+            imgName = imgName.replace('@1x', '@3x');
+            adjusted = 'adjusted to 3x.';
+          } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+            // double density aka retina
+            imgName = imgName.replace('@1x', '@2x');
+            adjusted = 'adjusted to 2x.';
+          } else {
+            // no adjustment required since default is '@1x'
+          }
+          // log success
+          // labAd.log({label: 'imgDPR: '+ adjusted, detail: imgName, type: 'log' });
+        } else {
+          // warn in console for files missing @ symbol
+          adjusted = '@ symbol not found in filename so imgDPR adjustment is not possible.'
+          labAd.log({label: 'imgDPR: '+ adjusted, detail: imgName, type: 'warn' });
+        }
+
+        return imgName;
+      } catch (err) {
+        labAd.log({label: 'imgDPR error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function imgObj(sId, sSrc){
+      try {
+        // if the src is @@adapt@@, use array access notation to get the adapted
+        // img src from the condition map
+        if (sSrc === '@@adapt@@') {
+          sSrc = labAd.imgs.cndMap[sId];
+        }
+
+        // prepend dir path to relative filenames
+        if (sSrc.indexOf("://") === -1) {
+          sSrc = labAd.dir + sSrc;
+        }
+
+        // create & return mapping obj
+        var obj = {id: sId, src: sSrc};
+
+        // uncomment the following if multiple img densities provided
+        // obj.src = imgDPR(obj.src);
+
+        // log results
+        // labAd.log({label: 'imgObj '+ sId + ' - ' + sSrc, detail: obj, type: 'log' });
+
+        return obj;
+      } catch (err) {
+        labAd.log({label: 'imgObj error: ', detail: err, type: 'error', isFatal: true });
+      }
+    }
+
+    function imClose(){
+      try {
+        // Closes the IM expansion
+          // remove scroll handler
+          labAd.scope.removeEventListener("scroll", monitorScroll, false);
+
+          // set el classNames to collapse .regionTopAds & reveal closed state
+          labAd.els.imTargetDiv.classList.add("closed");
+          labAd.els.imOpen.classList.add("lab-hidden");
+          labAd.els.imClosed.classList.remove("lab-hidden");
+
+        labAd.log({label: 'imClose ', detail: 'imClose', type: 'log' });
+      } catch (err) {
+        labAd.log({label: 'imClose error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function imOpen(){
+      try {
+        // Opens the IM expansion
+          // set el classNames to expand .regionTopAds & reveal open state
+          labAd.els.imTargetDiv.classList.remove("closed");
+          labAd.els.imOpen.classList.remove("lab-hidden");
+          labAd.els.imClosed.classList.add("lab-hidden");
+
+          // listen for scroll change to close ad
+          labAd.scope.addEventListener("scroll", monitorScroll, false);
+
+        labAd.log({label: 'imOpen ', detail: 'imOpen', type: 'log' });
+      } catch (err) {
+        labAd.log({label: 'imOpen error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function imToggle(){
+      try {
+        // imToggle simply updates the state of the IM and
+        // calls imOpen or imClose accordingly.
+        if (labAd.state === 'open') {
+          labAd.state = 'closed';
+          imClose();
+        } else {
+          labAd.state = 'open';
+          imOpen();
+        }
+
+        labAd.log({label: 'imToggle ', detail: labAd.state, type: 'log' });
+      } catch (err) {
+        labAd.log({label: 'imToggle error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function logInfo(oInfo){
+      // save to logs array - regardless of type or details
+      this.logs.push(oInfo);
+
+      // console output format will correspond to type of info being logged.
+      // only local files are eligible for console output.
+
+      // steps for error logs
+      if (oInfo.type === 'error') {
+        // save to errors array
+        this.errors.push(oInfo);
+        // always output log errors so they cannot be suppressed/missed due to logLevel
+        console[oInfo.type](oInfo);
+
+        // if the error is fatal, call showDefault with label passed as reason
+        if (oInfo.isFatal) {
+          showDefault(oInfo.label);
+        }
+      }else{ // steps for non-error logs
+
+        // console output is only possible if file is local
+        if (window.location.href.indexOf("file://") != -1) {
+          // adjust type/level of output based on labAd.logLevel
+          switch (labAd.logLevel) {
+            case 2:
+              // output every individual log
+              console[oInfo.type](oInfo);
+              break;
+            case 0:
+              // output nothing to console
+              break;
+            default:
+              // clear console since this can fire many times but we only need 1 output for this setting
+              console.clear();
+
+              // if there are errors, output them before labAd
+              if (labAd.errors.length > 0) {
+                labAd.errors.forEach(function(err, i){
+                  console.error(err);
+                })
+              }
+
+              // output labAd object for easy inspection
+              console.log(labAd);
+              break;
+          }
+        };
+      }
+
+      // update labInfo. Example: statefarm-4693437107-1528401281492
+      setLabInfo(this.meta.advertiser + '-' + this.meta.placement + '-' + this.macros.width + 'x' + this.macros.height + '-' + this.time.date, this);
+    }
+
+    function logTime(sName){
+        try {
+          // log timing of key events to time.log for tracking purposes
+          // also return getTime() value so this can be used to get timestamps
+          var d = new Date();
+          var order = Object.keys(labAd.time.log).length;
+          // create new log obj
+          labAd.time.log[sName] = {};
+          // stamp this event
+          labAd.time.log[sName].stamp = d.getTime();
+          // calc split in ms from previous stamp
+          if (sName != 'initAd') {
+            labAd.time.log[sName].split = (labAd.time.log[sName].stamp - labAd.time.stamp);
+          } else {
+            labAd.time.log[sName].split = 0;
+          }
+          // calc elapsed from initAd - in ms
+          labAd.time.log[sName].elapsed = (labAd.time.log[sName].stamp - labAd.time.log['initAd'].stamp);
+          // capture log order to indicate where in sequence this log occured
+          labAd.time.log[sName].order = order;
+
+          // capture timestamp to use for next split
+          labAd.time.stamp = d.getTime();
+
+          return labAd.time.stamp;
+        } catch (err) {
+          labAd.log({label: 'logTime error: ', detail: err, type: 'error', isFatal: false });
+        }
+    }
+
+    function monitorScroll(){
+      try {
+        // close the expansion if the scroll positions changes by 60+
+        if (labAd.scope.scrollY >= 60) {
+            // remove listener then toggleState
+            labAd.scope.removeEventListener("scroll", monitorScroll, false);
+            imToggle();
+        }
+        // labAd.log({label: 'monitorScroll ', detail: labAd.scope.scrollY, type: 'log' });
+      } catch (err) {
+        labAd.log({label: 'monitorScroll error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function setAdRecord(recordObj){
+      try {
+        var adRecord, recordType;
+        // if a record obj or details is passed in the function call,
+        // it's probably an update to an existing record - or possibly a
+        // new custom record with unique properties beyond a standard record.
+        if (recordObj) {
+          // create a non-standard record from the passed object
+          adRecord = recordObj;
+          recordType = 'update-custom';
+        } else { // creates a new record using standard criteria
+          // adjust exp time formula based on labAd.mode - same as used in initAd
+          var expTimeFormula = (labAd.mode === 'live') ? 7 * 24 * 60 * 60 * 1000 : 1 * 60 * 1000;
+          adRecord = {
+            name: (labAd.mode === 'live') ? labAd.meta.advertiser : labAd.meta.advertiser + '-' + labAd.adCond,
+            cid: labAd.macros.cid,
+            // exp date for individual ad record.
+            // set the expires time using the expiration formula
+            expires: labAd.time.date.getTime() + expTimeFormula,
+            // date string indicating when ad was viewed last. String format is easier to test for match.
+            viewed: labAd.time.date.toDateString(),
+            // set initial count to 1 since this is first viewing
+            count:1
+          }
+          recordType = 'standard';
+          adRecord.expireStr = new Date(adRecord.expires).toLocaleString(); // HACK: temp string display for testing/review
+        }
+        labAd.log({label: 'setAdRecord: '+ recordType, detail: adRecord, type: 'log' });
+        return adRecord;
+      } catch (err) {
+        labAd.log({label: 'setAdRecord error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function setLabInfo(sName, obj) {
+      try {
+        // store passed object to labInfo on parent DOM if possible
+        if (labAd.macros.gamPreview === 'true') {
+          // skip logging if running in DFP Preview
+          return;
+        } else {
+          parent.labInfo = parent.labInfo || {};
+          parent.labInfo[sName] = obj;
+        }
+      } catch (err) {
+        labAd.log({label: 'setLabInfo error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function showDefault(sReason) {
+      try {
+        if (!labAd.displayed) {
+          // flag to prevent ad from displaying multiple times in the event of failure or timeout
+          labAd.displayed = true;
+
+          logTime('showDefault');
+          labAd.default.reason = sReason;
+          labAd.log({label: 'showDefault: ', detail: labAd.default.reason, type: 'log' });
+
+          // Create default image element & attach to labAdDiv when loaded
+          labAd.els.labDefaultImg = document.createElement('img');
+          labAd.els.labDefaultImg.src = labAd.dir + imgDPR(labAd.default.img);
+          labAd.els.labDefaultImg.id = 'labDefaultImg';
+          labAd.els.labDefaultImg.alt = labAd.default.reason;
+          labAd.els.labDefaultImg.onclick = exitClick;
+
+          // moving HTML structure to target div on parent or in Preview Mode
+          if (labAd.mode === 'preview' || labAd.mode === 'gamPreview') {
+            // if Preview Mode, move #labAdDiv to #previewAdContainer in right column
+            labAd.els.imTargetDiv = labAd.els.previewAdContainer;
+            // add classes to adjust preview container
+            labAd.els.imTargetDiv.className = 'overlay closed ' + labAd.deviceSize;
+            // hide labAdDiv to prevent alt shinethrough
+            labAd.els.labAdDiv.style.display = 'none';
+            labAd.els.imTargetDiv.appendChild(labAd.els.labDefaultImg);
+          }else{
+            // else use parent.regionTopAds
+            labAd.els.imTargetDiv = parent.document.querySelector('.regionTopAds');
+            // apply classes to size the target div
+            labAd.els.imTargetDiv.classList.add(labAd.deviceSize, 'closed');
+              // 1. hide everything inside
+              var rtaNodes = labAd.els.imTargetDiv.querySelectorAll('div');
+              rtaNodes.forEach(function(el){el.style.display = 'none'});
+              // 2. place #labDefaultImg
+              labAd.els.imTargetDiv.appendChild(labAd.els.labDefaultImg);
+              // 3. place #imCSS - includes CSS tweaks for regionTopAds
+              labAd.els.imCSS = document.querySelector('#imCSS');
+              labAd.els.imTargetDiv.appendChild(labAd.els.imCSS);
+
+          }
+
+          var err = {message:'showDefault called again.'}
+          labAd.log({label: 'Display routine called after labAd.displayed === true.', detail: err, type: 'error', isFatal: false });
+        }
+
+      } catch (err) {
+        // not fatal since there's no fallback for this failure.
+        labAd.log({label: 'showDefault error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', initAd, false);
+    </script>
+    <style id="imPreviewAlt">
+      /* Preview Mode CSS - DO NOT EDIT */
+        body {margin: 0;}
+        #previewMainContainer{opacity: 0;}
+        #previewAltContainer{display: none;}
+      /* END: Preview Mode CSS - DO NOT EDIT */
+      </style>
+      <style id="imCSS">
+        /* imTargetDiv CSS for Preview Mode ================================== */
+        #previewAdContainer{overflow: hidden;}
+        /* Order sz classes from smallest to large to control cascade */
+        #previewAdContainer.sm {/*height: 320px;*/ padding-top: 80.44%;}
+        #previewAdContainer.sm.closed {/*height:94px;*/ padding-top: 29.22%;}
+        #previewAdContainer.md {/*height: 354px;*/ padding-top: 77.66%;width:91%;left:1px}
+        #previewAdContainer.md.closed {/*height: 121px;*/ padding-top: 26.66%;width:96.22%;left:-6px;}
+        #previewAdContainer.lg {/*height: 320px;*/ width: 97.80%;padding-top: 83.20%;left:1.60px;}
+        #previewAdContainer.lg.closed {/*height:94px;*/ width: 98%; padding-top: 28.60%;left:1px;}
+        #previewAdContainer.xl {/*height: 354px;*/ padding-top: 82.80%;width:97%}
+        #previewAdContainer.xl.closed {/*height: 121px;*/ padding-top: 28.20%;width:97%;}
+      /* imTargetDiv CSS for Live Site ===================================== */
+        .regionTopAds{overflow: hidden;}
+        .regionTopAds.sm {/*height: 85.5vw;*/ padding-top: 75.80%; }
+        .regionTopAds.sm.closed {/*height:94px;*/ padding-top: 29.22%;}
+        .regionTopAds.md {/*height: 85.5vw;*/ padding-top: 85%;right:-10px;}
+        .regionTopAds.md.closed {/*height: 121px;*/ padding-top: 29.22%; }
+        .regionTopAds.lg {/*height: 85.5vw;*/ padding-top: 85.20%;}
+        .regionTopAds.lg.closed { /*height:94px;*/ padding-top: 29.22%;}
+        .regionTopAds.xl {/*height: 85.5vw;*/ padding-top: 86%;left:2px;}
+        .regionTopAds.xl.closed {/*height: 121px;*/ padding-top: 29.22%;}
+
+        #labAdDiv {
+            position: absolute;
+            top: 0px;
+            margin: 0 auto;
+            width: 100vw !important; /* add */
+            /*max-height: 320px !important;  add */
+            height: 100% !important; /* add */
+            overflow: hidden;
+            max-width: 100% !important; /* remove or disable with max-width: auto;*/
+            min-width: auto !important; /* remove or disable with min-width: auto;*/
+        }
+
+        #mwimForegroundLandscapeContent { /* add */
+            width: auto !important;
+           height: 110px !important;
+           max-width: 100% !important;
+           /* max-height: 100% !important; */
+           left: 0 !important;
+           right: 0 !important;
+           top: 0px !important;
+        }
+
+        #mwimLandscapeContent
+        {
+            width: auto !important;
+           height: 110px !important;
+           max-width: 100% !important;
+           /* max-width: 100% !important;
+           max-height: 100% !important; */
+           left: 0 !important;
+           right: 0 !important;
+           top: 0px !important;
+
+        }
+
+        #mwimOpenContent { /* add */
+            /* min-width: 100vw !important; */
+            /* add */
+            width: 100% !important; /* add */
+            height: auto !important;
+        }
+
+        #mwimClosedContent { /* add */
+            /* min-width: 100vw !important; */
+             /* add */
+             width: 100% !important;
+            /* width: auto !important;  */
+            /* add */
+        }
+        #labAdDiv.sm {width: 375px; height: 320px;}
+        #labAdDiv.sm.closed {width: 375px; height: 110px;}
+        #labAdDiv.md {width: 414px; height: 354px;}
+        #labAdDiv.md.closed {width: 414px; height: 121px;}
+        #labAdDiv.lg {width: 375px; height: 320px;}
+        #labAdDiv.lg.closed {width: 375px; height: 110px;}
+        #labAdDiv.xl {width: 414px; height: 354px;}
+        #labAdDiv.xl.closed {width: 414px; height: 121px;}
+
+        #labAdDiv div,
+        #labAdDiv img {
+          position: absolute;
+          width: 100%;
+          height: auto;
+          margin: auto;
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+        }
+
+        /* New height spec is 354 but these assets pre-date the spec updates. So open is 354px*/
+        #labAdDiv.md #imOpen, #labAdDiv.xl #imOpen {height: 354px;}
+        #labAdDiv.sm #imOpen, #labAdDiv.lg #imOpen {height: 320px;}
+
+        /*The closed height is only 121px instead of the new spec height of 121px */
+        /* #labAdDiv.md #imClosed, #labAdDiv.xl #imClosed {height: 118px; width:380px; left:18px} */
+        #labAdDiv.md #imClosed {height: 118px; width:380px; left:18px}
+        #labAdDiv.xl #imClosed {height: 118px;}
+        #labAdDiv.sm #imClosed, #labAdDiv.lg #imClosed {height: 104px;}
+        /* Landscape is the same height as closed in this case. */
+        #labAdDiv.md #imLandscape, #labAdDiv.xl #imLandscape {height: 121px;max-width: 414px;left: 0;right: 0;}
+        #labAdDiv.sm #imLandscape, #labAdDiv.lg #imLandscape, #labAdDiv.xl #imLandscape {
+            max-width: 100% !important; /* remove or disable with max-width: auto;*/
+        }
+        #labAdDiv #imBtnClose {
+          position: absolute;
+              top: 0px;
+              right: 0px;
+              width: 21px;
+              height: auto;
+              z-index: 5;
+              cursor: pointer;
+              padding: 10px;
+        }
+        #labAdDiv #imBtnRotate {
+          left: 0;
+          right: 0;
+          /* bottom: 0; */
+          top: 75px;
+          width: 170px;
+          z-index: 5;
+          cursor: pointer;
+          background-color: rgba(0, 0, 0, 0.65);
+        }
+
+        /* z-indexing
+        5 - #imBtnClose, #imBtnRotate, #imBtnExpand
+        0 - #mwimOpenContent, #mwimClosedContent, #mwimLandscapeContent */
+        #imBtnClose{z-index: 5;}
+        #mwimForegroundContent{z-index: 4;}
+        #mwimForegroundClosedContent, #mwimForegroundLandscapeContent{z-index: 4;}
+        #mwimOpenContent, #mwimClosedContent, #mwimLandscapeContent{z-index: 0;}
+
+  /* update background */
+  .sm #mwimClosedContent
+  {
+      grid-area: mwimClosedContent;
+      background-size: cover;
+      background-position: center;
+      width: 100% !important;
+
+  }
+  .md #mwimClosedContent
+  {
+      grid-area: mwimClosedContent;
+      background-size: cover;
+      background-position: center;
+      width: 99% !important;
+  }
+  .lg #mwimClosedContent
+  {
+      grid-area: mwimClosedContent;
+      background-size: cover;
+      background-position: center;
+      width: 99.20%;
+  }
+  .xl #mwimClosedContent
+  {
+      grid-area: mwimClosedContent;
+      background-size: cover;
+      background-position: center;
+      width: 100%;
+  }
+
+  .sm #mwimForegroundClosedContent
+  {
+    grid-area: mwimForegroundClosedContent;
+    background-size: cover;
+    background-position: center;
+    z-index: 4;
+    width: 100% !important;
+  }
+  .md #mwimForegroundClosedContent
+  {
+    grid-area: mwimForegroundClosedContent;
+      /* height: 92%; */
+      background-size: cover;
+      background-position: center;
+      z-index: 4;
+      width: 99% !important;
+
+
+  }
+  .lg #mwimForegroundClosedContent
+  {
+      grid-area: mwimForegroundClosedContent;
+      background-size: cover;
+      background-position: center;
+      width:99.20% !important;
+      left: 0 !important; /* add */
+      right: 0 !important; /* add */
+
+  }
+
+
+  .xl #mwimForegroundClosedContent
+  {
+      grid-area: mwimForegroundClosedContent;
+      background-size: cover;
+      background-position: center;
+      width:100% !important;
+
+
+        }
+  /* update Background End */
+
+
+  /* updae Foreground  Content*/
+  .sm #mwimOpenContent
+  {
+    grid-area: mwimOpenContent;
+    height: 82.8% !important;
+    background-size: cover;
+    background-position: center;
+    width:100%;
+  }
+  .md #mwimOpenContent
+  {
+    grid-area: mwimOpenContent;
+    /* height: 90% !important; */
+    background-size: cover;
+    background-position: center;
+    width:100%;
+  }
+  .lg #mwimOpenContent
+  {
+    grid-area: mwimOpenContent;
+      /* height:98% !important; */
+      background-size: cover;
+      background-position: center;
+      width: 99.60%;
+  }
+  .xl #mwimOpenContent
+  {
+    grid-area: mwimOpenContent;
+      /* height: 95.8% !important; */
+      background-size: cover;
+      background-position: center;
+      width: 100%;
+  }
+
+  .sm #mwimForegroundContent
+  {
+
+    grid-area: mwimForegroundContent;
+    height: 83% !important;
+    background-size: cover;
+    background-position: center;
+    z-index: 4;
+    width:100%;
+
+  }
+  .md #mwimForegroundContent
+  {
+
+    grid-area: mwimForegroundContent;
+    /* height: 90% !important; */
+    background-size: cover;
+    background-position: center;
+    z-index: 4;
+  }
+  .lg #mwimForegroundContent
+  {
+      grid-area: mwimForegroundContent;
+      /* height: 98% !important; */
+      background-size: cover;
+      background-position: center;
+      z-index: 4;
+      width: 99.60%;
+  }
+  .xl #mwimForegroundContent
+  {
+    grid-area: mwimForegroundContent;
+      /* height: 96% !important; */
+      background-size: cover;
+      background-position: center;
+      z-index: 4;
+      width: 100%;
+  }
+
+  /* update Foreground Content */
+
+  /* update expand */
+
+  #imBtnExpand
+  {
+          position: absolute;
+          left: 0;
+          right: 0;
+          width: 85px;
+          z-index: 5 ;
+          cursor: pointer;
+          margin:auto;
+  }
+  .sm #imBtnExpand {
+          width: 85px;
+          bottom: 8px;
+        }
+  .md #imBtnExpand {
+      width: 85px;
+          bottom: 2px;
+          top: 65px;
+               }
+  .lg #imBtnExpand {
+      width: 85px;
+          bottom: 2px;
+        }
+  .xl #imBtnExpand {
+      width: 85px;
+          bottom: 4px;
+        }
+  /* update end */
+
+        /* Sizing for labDefaultImg on all device sizes */
+      .sm #labDefaultImg {
+      width: 100%;
+      height: auto;
+      position: absolute;
+      min-width: 330px;
+      max-width: 328px;
+      top: 0;
+      transform: translateX(-50%);
+      left: 50%;
+        }      /* .sm #labDefaultImg {
+          width: 100%;
+          height: auto;
+          position: absolute;
+          min-width: 375px;
+          max-width: 414px;
+          top: 0;
+          transform: translateX(-50%);
+          left: 55%;
+        } */
+
+        .md #labDefaultImg {
+          width: 101%;
+          height: auto;
+          position: absolute;
+          min-width: 375px;
+          max-width: 414px;
+          top: 0;
+          transform: translateX(-50%);
+          left: 55%;
+        }
+
+        .lg #labDefaultImg {
+          width: 100%;
+          height: auto;
+          position: absolute;
+          min-width: 375px;
+          max-width: 414px;
+          top: 0;
+          transform: translateX(-50%);
+          left: 50%;
+        }
+
+        .xl #labDefaultImg {
+          width: 404px;
+          height: auto;
+          position: absolute;
+          min-width: 375px;
+          max-width: 414px;
+          top: 0;
+          transform: translateX(-50%);
+          left: 207px;
+        }
+
+
+        /* Sizing for labDefaultImg on all device sizes */
+
+        .lab-hidden {display: none;}
+
+        /* Handle device orientation changes by toggling imContent & imLandscape */
+        #imLandscape {display: none;}
+        @media screen and (orientation: landscape) {
+            /* Hide IM open/close content */
+              #imContent,
+              #imBtnExpand {
+                  display: none;
+              }
+            /* Reveal landscape content & reduce height of container  */
+              #imLandscape {
+                  display: block;
+              }
+
+              #labAdDiv{
+                position: relative;
+                top: 0;
+              }
+
+              .regionTopAds.sm.closed {height: 110px; padding-top: 0;}
+              .regionTopAds.md.closed {height: 121px; padding-top: 0;}
+              .regionTopAds.lg.closed {height: 110px; padding-top: 0;}
+              .regionTopAds.xl.closed {height: 121px; padding-top: 0;}
+
+              .regionTopAds.sm {height: 110px; padding-top: 0;}
+              .regionTopAds.md {height: 121px; padding-top: 0;}
+              .regionTopAds.lg {height: 110px; padding-top: 0;}
+              .regionTopAds.xl {height: 121px; padding-top: 0;}
+          }
+      </style>
+  </head>
+
+  <body>
+  <!-- START NO REFRESH CODE -->
+    <script type="text/javascript">
+        try {
+        parent.window.TWC=parent.window.TWC || {};
+        parent.window.TWC.adUtils=parent.window.TWC.adUtils || {};
+        parent.window.TWC.adUtils.killRefresh= parent.window.TWC.adUtils.killRefresh || [];
+        parent.TWC.adUtils.killRefresh.push('%%PATTERN:pos%%');}catch(err){console.log(err);}
+    </script>
+    <!-- END NO REFRESH CODE -->
+    <!-- #labAdDiv is the main container for all AD elements -->
+    <div id="labAdDiv">
+      <!-- MW IM CONTENT-->
+      <div id="imContent">
+          <!--Touch Surface-->
+          <div id="imTouchSurface"></div>
+          <div id="imOpen">
+              <img id="imBtnClose" data-click="imToggle" data-img="https://s.w-x.co/cl/polaris/tcl3965-mw-im-stc/close-x.png" draggable="false">
+              <img id="mwimForegroundContent" data-img="@@adapt@@" data-click="exitClick" draggable="false">
+              <img id="mwimOpenContent" data-img="@@adapt@@" data-click="exitClick" draggable="false">
+          </div>
+          <div id="imClosed">
+              <img id="imBtnExpand" data-click="imToggle" data-img="https://s.w-x.co/cl/polaris/tcl3965-mw-im-stc/expand-btn.png" class="lab-trans">
+              <img id="mwimForegroundClosedContent" data-img="@@adapt@@" data-click="exitClick" draggable="false">
+              <img id="mwimClosedContent" data-img="@@adapt@@" data-click="exitClick" draggable="false">
+
+          </div>
+      </div>
+      <div id="imLandscape">
+          <img id="imBtnRotate" data-img="https://s.w-x.co/ads/creatives/bwbb/rotateBtn.png" class="lab-trans">
+          <img id="mwimForegroundLandscapeContent" data-img="@@adapt@@" data-click="exitClick" draggable="false">
+          <img id="mwimLandscapeContent" data-img="@@adapt@@" data-click="exitClick" draggable="false">
+      </div>
+      <!-- MW IM CONTENT END-->
+  </div>
+
+    <!-- Container for all tracking pixels - manually placed or dynamically generated. -->
+    <div id="labTracking" style="display:none;">
+      <!-- IAS TRACKING -->
+    </div>
+
+    <!-- Preview Mode Structure - DO NOT EDIT -->
+    <div id="previewMainContainer">
+      <!-- LEFT FORM COL -->
+      <div id="previewColLeft">
+        <hr>
+        <img id="previewFormLogo" src="" alt="IBM Watson Advertising">
+        <hr>
+
+        <p id="previewFormClientName"> Client Name Here </p>
+        <hr>
+        <div id="previewFormDeviceSize">
+          <p>Device Size</p>
+          <!-- // added this for XL sizes preview - wodev comment-->
+          <input type="radio" name="deviceSize" value="sm" id="deviceSmall">
+          <label for="deviceSmall" id="label-01">SM</label>
+          <input type="radio" name="deviceSize" value="md" id="deviceMedium">
+          <label for="deviceMedium" id="label-02">RG</label>
+          <input type="radio" name="deviceSize" value="lg" id="deviceLarge">
+          <label for="deviceLarge" id="label-03">LG</label>
+          <input type="radio" name="deviceSize" value="xl" id="deviceXLarge">
+          <label for="deviceXLarge" id="label-04">XL</label>
+
+            <!-- // added this for medium sizes preview - wodev comment -->
+        </div>
+        <hr>
+        <div id="previewFormCondition">
+          <div id="btnPrevCond"><img src="https://s.w-x.co/cl/im/mw/preview-mode/assets/prev.png" /></div>
+              <div id="txtCondName"></div>
+          <div id="btnNextCond"><img src="https://s.w-x.co/cl/im/mw/preview-mode/assets/next.png" /></div>
+          </div>
+        <hr>
+        <div id="previewFormConditionIndex"></div>
+      </div>
+
+      <!-- RIGHT AD COL  -->
+      <div id="previewColRight">
+
+        <div id="previewPageMW">
+          <div id="previewDeviceToggleBtn"></div>
+          <div id="previewDeviceBezelCover"></div>
+          <div id="previewDeviceBezelCoverl"></div>
+          <div id="previewDeviceOverlay"></div>
+          <img id="previewBrowserAddress" src="#" alt="weather.com">
+          <div id="previewBrowserViewport">
+            <!-- items that go in the browser viewport -->
+            <div id="previewContentMW"></div>
+            <img id="previewNavMW" src="#" alt="twc footer nav">
+            <img id="previewNavBrowser" src="#" alt="browser nav">
+          </div>
+        </div>
+
+      <!-- End Right Column -->
+      </div>
+    </div>
+    <div id="previewAltContainer">
+      <img id="previewAltLogo" src="" alt="IBM Watson Advertising">
+      <p>Please increase browser width to view creative preview form.</p>
+    </div>
+
+  </body>
+</html>

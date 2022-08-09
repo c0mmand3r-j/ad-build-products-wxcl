@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="mraid.js"></script>
+    <title>Universal Orlando - MAIM - MRAID</title>
+    <script src="//media.admob.com/api/v1/google_mobile_app_ads.js"></script>
+    <script>
+    var labAd = {
+      adCond: null,
+      mode: null,
+    meta:{
+      jiraID: 'tcl0000', //Example: The name of the JIRA ID
+      projectName: 'Universal Orlando - Q1 - Mobile App Integrated Marquee (Static, Expandable Rich Media)', //CVS Stores Preseason (Week Ahead SPON)
+      advertiser: 'Universal Orlando', // Ex: 'mcdonalds'
+      placement: '', // Ex: 'ros-shopper-moms'
+      created: '10-09-2019', // Ex: '08-23-2018'
+      modified: '07-27-2022', // change when base code changes to current date of change
+      designer: 'bheckrote', // Ex: 'coreyd'
+      dev: 'JamesB' //Ex: 'dks'
+    },
+    product:{
+      productName:'MAIM - Mobile App Integrated Marquee (Static)', // Abrev. + Full name of Product
+      version: '2.3-beta', //This will reflect the Github Version on the stable branch
+      type: 'static', // 'static', 'animated'
+      interactive: 'MRAID', // EX: 'locator', 'vertical-video', 'swipe-carousel', etc.
+      adaptor: '',  //EX: 'temp-range', 'temp-comparison', 'countdown', etc.
+      dimensions:{
+        ad:{
+          //default for milli devices
+          sm: {width:320, height:180},
+
+          //default for kilo devices
+          md: {width:360, height:180},
+          lg: {width:360, height:180},
+          xl: {width:360, height:180}
+        },
+        bg:{
+          //default for milli devices
+          sm: {width:400, height:660},
+
+          //default for kilo devices
+          md: {width:500, height:800},
+          lg: {width:500, height:800},
+          xl: {width:500, height:800}
+        }
+      },
+      platforms: ['android', 'ios']// 'ios', 'android', 'web', 'mw'
+    },
+
+
+      appBg: { // object passed to AppEvent - do not add new properties to this object.
+        baseURL: '',
+        imgID: '400x660-bg-cld-d.jpg'
+        // This unique 'ID' gets pushed to the payload by the function showBg(bgProps).
+        // This 'imgID' needs to be unique so that there aren't any appBG caching issues in app.
+        // showBg() decalres 'imgID' as a unique string by concatenating the asset directory before the filename.
+      },
+      appBgVid: { // object passed to AppEvent - do not add new properties to this object.
+        vidURL: '' // Ex:'414x210-clear_day@1x.mp4' - @1x filename only for initial assignment. labAd.dir prepended before sending to app event.
+      },
+      deviceSize:'sm', // sm, md, lg, xl
+      dir: 'https://s.w-x.co/cl/',//// HACK:  //***NOTE***: This is the standard COS directory, This doesn't change.
+      dirClient: 'misc/',               //Ex: applebees/ Name of the client folder
+      dirFolder: 'cl1856-nxtgim-mrd/',    //Ex: tcl2162-ma-if-stc/  folder that all the assets live in
+      dpr: window.devicePixelRatio.toString(),
+
+      foregroundElements: {
+        addFg: false, // Set to true if Foreground element is needed | False if no Foreground element is needed
+        fimg: 'https://s.w-x.co/cl/wxcl/prototype/maim/gridlines/320x180-fg-defbg.png' // using transparent png since everything is baked into BG image
+      },
+      default: {
+        cnd: 'cld',
+        dynght: 'D',
+        img:'https://s.w-x.co/cl/test/1x1_test.png', // using transparent png since everything is baked into BG image
+        previewMode: 'o',
+        reason:'na' // 'na' is default
+      },
+      displayed: false, // flag indicating showAd or showDefault has executed successfully.
+      selected: {        // for tracking selected values
+        adImages:[],
+        bgEvent:'adBg', // Ex: 'adBg' or 'adBgVid' - set based on ad concept.
+        scenario: 'na'
+      },
+      els: {},
+      errors: [],
+      imgs: {},
+      log: logInfo,
+      logLevel: 1, // 0 = none, 1 = labAd, 2 = everything
+      logs: [],
+
+      macros: { // macros populated by GAM when ad is served
+        cnd: "%%PATTERN:cnd%%", // current condition.
+        temp: "%%PATTERN:tmpc%%", //current temperature celcius
+        dynght: "%%PATTERN:dynght%%", // day or night? Possible values: 'D', 'N'
+        height: "%%HEIGHT%%", // ad slot height
+        width: "%%WIDTH%%", // ad slot width
+        plat: "%%PATTERN:plat%%", // platform. Used for tracking
+        timeframe: "%%PATTERN:tf%%", // timeframe. Used for tracking
+        gamClick: "%%CLICK_URL_UNESC%%", // Google Ad Manager click track URL
+        gamPreview: '%%PREVIEW_MODE%%',
+        cid: "%ecid!", // creative id
+        lid: "%eaid!", // line item id
+        ord: '%%CACHEBUSTER%%',
+        orderID: '%ebuy!',
+        ADunit: '%%ADUNIT%%',
+        loc: "%%PATTERN:zip%%"   // contextual location
+      },
+      preview:{
+        css:{id:'previewCSS', href:'preview-maim-v4.css', dir:'hostedcss'},
+        dirs:{
+          hostedAssets:'https://s.w-x.co/cl/wxcl/preview-mode/maim/assets/v2/',
+          hostedjs:'https://s.w-x.co/cl/wxcl/preview-mode/maim/js/',
+          hostedcss:'https://s.w-x.co/cl/wxcl/preview-mode/maim/css/',
+          localAssets:'preview-mode/assets/v2/',
+          localjs:'preview-mode/js/',
+          localcss:'preview-mode/css/'
+        },
+        images:[
+          // NOTE: images.src values use split('-'). Extraneous '-' in filenames will cause issues.
+          // Standard Preview Images & Conditions
+  				{id: 'logo', type:'logo', src: 'all-logo-watson-ads.png', dir: 'hostedAssets'},
+  				{id: 'device', type:'device', src: 'lg-device.png', dir: 'hostedAssets'},
+
+  				//for devices uis'
+  				{id: 'ui-clr+D', type:'ui', src: 'lg-ui-clear-day.png', dir: 'hostedAssets'},
+  				{id: 'ui-clr+N', type:'ui', src: 'lg-ui-clear-night.png', dir: 'hostedAssets'},
+  				{id: 'ui-cld+D', type:'ui', src: 'lg-ui-cloudy-day.png', dir: 'hostedAssets'},
+  				{id: 'ui-cld+N', type:'ui', src: 'lg-ui-cloudy-night.png', dir: 'hostedAssets'},
+  				{id: 'ui-rain+D', type:'ui', src: 'lg-ui-rainy-day.png', dir: 'hostedAssets'},
+  				{id: 'ui-rain+N', type:'ui', src: 'lg-ui-rainy-night.png', dir: 'hostedAssets'},
+  				{id: 'ui-snow+D', type:'ui', src: 'lg-ui-snowy-day.png', dir: 'hostedAssets'},
+  				{id: 'ui-snow+N', type:'ui', src: 'lg-ui-snowy-night.png', dir: 'hostedAssets'}
+        ]
+      },
+      promises: {},
+      test: {},
+      time: {
+        log:{},
+        stamp:0 // most recent getTime. Updated when logTime is called.
+      },
+      tracking: {
+       clickTag: 'https://weather.com', // Ex: 3rd party impression tracker img src
+       imp3rdParty: 'https://s.w-x.co/cl/test/1x1_test.png'
+     },
+     vars:{
+      cnd:{value:'', default:'clr', macro:'macros.cnd'},
+      dynght:{value:'', default:'D', macro:'macros.dynght'},
+      deviceSize:{value:'', default:'sm', macro:'deviceSize'},
+      dpr:{value:'', default:'1', macro:'dpr'},
+      previewMode:{value:'', default:'o', macro:null},
+      tempC:{value:'', default:'8', macro:'macros.tempC'},
+      height:{value:'', default:'210', macro:'macros.height'},
+      width:{value:'', default:'320', macro:'macros.width'}
+    }
+   }
+
+    function initAd() {
+      try {
+        // init date & time
+        labAd.time.date = new Date();
+        logTime('initAd');
+
+        // init labAd props and els - especially those needed for tracking and timing operations
+        labAd.els.labAdDiv = document.getElementById('labAdDiv');
+        labAd.els.labTracking = document.getElementById('labTracking');
+
+        labAd.els.previewColRight = document.getElementById('previewColRight');
+        labAd.els.exp = document.getElementById('expContainer');
+        labAd.els.expandClicktag = document.getElementById('expandClicktag');
+        labAd.els.Expandbg = document.getElementById('Expandbg');
+        labAd.els.Expandbg1 = document.getElementById('Expandbg1');
+        labAd.els.Expandbg2 = document.getElementById('Expandbg2');
+
+        labAd.els.CityStateText = document.getElementById('previewCityStateOverlay');
+
+
+        labAd.els.expPreview = document.getElementById('expContainerPreview');
+        labAd.els.ExpandbgPreview = document.getElementById('ExpandbgPreview');
+        labAd.els.ExpandbgPreview1 = document.getElementById('ExpandbgPreview1');
+        labAd.els.ExpandbgPreview2 = document.getElementById('ExpandbgPreview2');
+
+
+        if(!labAd.isMobile){
+            mraidClose.addEventListener("click", hideExpand);
+        }
+
+        // request overall tracking.
+				getImpPixel(labAd.tracking.imp3rdParty, 'imp-3rdParty', false);
+
+				// get ad mode to determine if vars populated by macros or test hash
+				labAd.mode = getAdMode();
+
+        // populate vars from the correct source for mode
+        initAdMode(labAd.mode); //usd to ruby
+
+        // determine adCond based on cnd and dynght values
+        labAd.adCond = labAd.macros.cnd + '-' + labAd.macros.dynght;
+
+        // init loader method for scripts, imgs and link els
+        initLoader();
+
+        // if Preview Mode, load resources needed, then init Preview Mode.
+        if (labAd.mode === 'preview' || labAd.mode === 'gamPreview') {
+          // group loader calls in array so they share the same callback
+          var sPathjs = labAd.preview.dirs.hostedjs; // .standard, .customDir or .local
+          var sPathcss = labAd.preview.dirs.hostedcss; // .standard, .customDir or .local
+          var aPreviewPromises = [
+            labAd.loader.js({src: sPathjs + 'preview-maim-v3.js', append: true}),
+            labAd.loader.css({src: sPathcss + 'preview-maim-v4.css', append: true})
+          ];
+
+          // use promise.all to execute callback when all promises are fulfilled
+          labAd.promises.previewResources = Promise.all(aPreviewPromises).then(function(result) {
+
+            // log success result
+            labAd.log({label:'aPreviewPromises fulfilled. ', detail: result, type: 'log'});
+
+            // complete init PreviewMode now that resources are loaded
+            labAd.preview.init();
+
+          }).catch(function(err) {
+            labAd.log({label: 'aPreviewPromises file load error: ', detail: err, type: 'error', isFatal: true });
+          });
+        }else{ // else proceed to display using ad served
+          initDisplay(labAd.adCond);
+        }
+
+			} catch (err) {
+        labAd.log({label: 'initAd error: ', detail: err, type: 'error', isFatal: true });
+			}
+		}
+
+    function initAdMode(sMode){
+      try {
+        var result = '';
+        // Cases below should define adjustments needed for test modes supported by ad.
+				switch (sMode) {
+					case 'preview':
+          case 'gamPreview':
+            // clear GAM click macro so clicks will work in test modes
+						labAd.macros.gamClick = "";
+            // assign values from HashParts - hash order is adstest + cnd + dynght + deviceSize + DPR + previewMode
+            labAd.macros.cnd = labAd.test.HashParts[1];
+						labAd.macros.dynght = labAd.test.HashParts[2].toUpperCase();
+						labAd.deviceSize = labAd.test.HashParts[3].toLowerCase();
+
+            // get dpr from hash if not undefined, otherwise use window property
+            labAd.dpr = (labAd.test.HashParts[4] != undefined) ? Number(labAd.test.HashParts[4]) : window.devicePixelRatio;
+
+						// adjust meta height
+            if (labAd.deviceSize !== 'sm') {
+              labAd.meta.width = 360;
+            }
+						break;
+					default: // covers 'live' and 'none'
+						//labAd.deviceSize = getDeviceSize();
+            labAd.deviceSize = getDeviceSize(labAd.macros.width);
+						break;
+				}
+
+        // log result
+        result = labAd.mode + ' activated';
+        labAd.log({label: 'initAdMode ', detail: result, type: 'log' });
+      } catch (err) {
+        labAd.log({label: 'initAdMode error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function initDisplay(sCond){
+      logTime('initDisplay');
+      try {
+        // start the display routine by firing appEvent, selecting files, loading AD & BG images
+
+        // fire adIM event asap so the app knows to push the feed card down
+        fireAppEvent('adIM', {});
+
+        // select files needed for AD & BG display.
+        labAd.selected = fileSelection(sCond);
+
+        // 1: showBg - should be called first since it cannot be preloaded.
+        // labAd.selected.bg properties will be used to package & send .
+        showBg(labAd.selected.bg);
+
+        // create an array of img promises to be loaded together
+        labAd.promises.adImages = [];
+        // create a loader.img instance for each selected img
+        labAd.selected.adImages.forEach(function(imgObj){
+          // add each individual promise to the collection
+          labAd.promises.adImages.push(labAd.loader.img(imgObj));
+        });
+
+        // use promise.all to execute callback when all promises are fulfilled
+        labAd.promises.allAdImages = Promise.all(labAd.promises.adImages).then(function(aLoadedImages) {
+          // log success aLoadedImages
+          labAd.log({label:'labAd.promises.allAdImages fulfilled. ', detail: aLoadedImages, type: 'log'});
+
+          // call showAd and pass the successfully loaded Image els that still
+          // need to be added to the DOM
+          showAd(aLoadedImages);
+        }).catch(function(err) {
+          labAd.log({label: 'labAd.promises.allAdImages file load error: ', detail: err, type: 'error', isFatal: true });
+        });
+
+        labAd.log({label: 'initDisplay ', detail: sCond, type: 'log' });
+      } catch (err) {
+        labAd.log({label: 'initDisplay error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function initLoader(){
+      try {
+        // initLoader: creates labAd.loader - which is a method that returns a function for loading resources using a Promise to determine success or failure. Currently supports script, link & img els. All different types can be loaded with the same callback.
+        logTime('initLoader');
+        labAd.loader = (function() {
+          // Function which returns a function: https://davidwalsh.name/javascript-functions
+          function _load(tag) {
+            return function(loadObj) {
+              // This promise will be used by Promise.all to determine success or failure
+              return new Promise(function(resolve, reject) {
+                var element;
+                var parent = 'body';
+                var attr = 'src';
+
+                // Adjust element type & attributes depending on tag type
+                switch(tag) {
+                  case 'img':
+                    element = new Image();
+                    element.id = loadObj.id;
+                    element.src = loadObj.src;
+                    break;
+                  case 'script':
+                    element = document.createElement(tag);
+                    element.async = true;
+                    break;
+                  case 'link':
+                    element = document.createElement(tag);
+                    element.type = 'text/css';
+                    element.rel = 'stylesheet';
+                    attr = 'href';
+                    parent = 'head';
+                    break;
+                }
+
+                // Important success and error for the promise
+                element.onload = function() {
+                  labAd.log({label: tag + ' loaded ', detail: {lO:loadObj, el:element, t:tag}, type: 'log' });
+                  // resolve the promise & return the element
+                  resolve(element);
+                };
+                element.onerror = function(err) {
+                  labAd.errors.push(err);
+                  reject(err);
+                };
+
+
+                // if append is true, element needs to be added to DOM immediately
+                // doing this & applying src will cause the resource to load but
+                // the Promise controls what happens next.
+                if (loadObj.append) {
+                  // apply the source & add to DOM
+                  element[attr] = loadObj.src;
+                  document[parent].appendChild(element);
+                }
+
+              });
+            };
+          }
+
+          return {
+            css: _load('link'),
+            js: _load('script'),
+            img: _load('img')
+          }
+        })();
+
+        labAd.log({label: 'initLoader ', detail: labAd.loader, type: 'log' });
+      } catch (err) {
+        labAd.log({label: 'initLoader error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function exitClick(event) {
+      try {
+        event.preventDefault();
+        var id = event.target.id;
+        var url = labAd.tracking.clickTag;
+        var target = "_blank";
+        var clickTime = logTime('exitClick');
+        var btnPos = labAd.els.btnInv.getBoundingClientRect();
+        labAd.log({label: 'exitClick from: ' + id, detail: url, type: 'log' });
+
+
+        if (labAd.isMobile){
+          mraid.close();
+          hideMraidExpand()
+          window.open(labAd.macros.gamClick + url, target);
+        } else {
+          window.open(labAd.macros.gamClick + url, target);
+        }
+
+        // alert(JSON.stringify(labAd, null, 1)); // HACK: remove from final code
+      } catch (err) {
+        labAd.log({label: 'exitClick error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function fileSelection(sCond){
+      try {
+        // selected is a return object containing all relevant details needed to
+        // complete the ad display process.
+        var selected = {
+          adImages:[], // array of AD images to be loaded
+          bg:{
+            eventName:'',  // string name AppEvent: 'adBg' or 'adBgVid'
+            fileName:'',  // string filename of the selected BG image or video
+            loopCount: 0 // number of times to loop BG video
+          },
+          scenario: '' // string name representing the selected scenario
+        };
+
+        /////////////////////////////////////////////////////////
+        // 1: Assign values used for most or all scenarios //
+        /////////////////////////////////////////////////////////
+        // NOTE: since there's only one image in the AD region for this creative,
+        // its also assigned as the static default - which is why the line below
+        // references that instead of just using the filename string. Also, the
+        // id is being set to 'btnInv' so it will inherit the click handler that
+        // that might be assigned to a transparent png in a more complex ad.
+        selected.adImages.push( imgObj('btnInv', labAd.default.img, labAd.product.dimensions.ad[labAd.deviceSize].width));
+        selected.bg.eventName = 'adBg';
+
+        ///TOGGLE FOR ADDING FOREGROUND ELEMENT(S)//
+        var fgele = labAd.foregroundElements.addFg;
+        if (fgele === true){
+          selected.adImages.push(imgObj('fgGrid', labAd.foregroundElements.fimg, labAd.product.dimensions.ad[labAd.deviceSize].width));
+        }else if (fgele === false) {
+          //DONT PUSH ANYTHING TO THE DOM
+        };
+
+        //////////////////////////////////////////////
+        // 2: Assign BG image/video to appBg or appBgVid //
+        //////////////////////////////////////////////
+
+        sCond = sCond.toLowerCase();
+        switch (sCond) {
+          case 'sun-d':
+          case 'clr-d':
+            selected.scenario = 'Clear Day';
+            selected.bg.fileName = '400x660-bg-sun-d.jpg';
+            break;
+          case 'sun-n':
+          case 'clr-n':
+            selected.scenario = 'Clear Night';
+            selected.bg.fileName = '400x660-bg-clr-n.jpg';
+            break;
+          case 'cld-n':
+          case 'pcld-n':
+            selected.scenario = 'Cloudy Night';
+            selected.bg.fileName = '400x660-bg-cld-n.jpg';
+            break;
+          case 'rain-d':
+          case 'thdr-d':
+            selected.scenario = 'Rainy Day';
+            selected.bg.fileName = '400x660-bg-rain-d.jpg';
+            break;
+          case 'rain-n':
+          case 'thdr-n':
+            selected.scenario = 'Rainy Night';
+            selected.bg.fileName = '400x660-bg-rain-n.jpg';
+            break;
+          default:
+            selected.scenario = 'Cloudy Day - default: '+ sCond;
+            selected.bg.fileName = '400x660-bg-cld-d.jpg';
+            break;
+        }
+
+        ////////////////////////////////////////
+        // 3: Apply logical BG img dimensions //
+        ////////////////////////////////////////
+
+        // process selected BG filename dimensions by passing through setSrcSize
+        selected.bg.fileName = setSrcSize(selected.bg.fileName, labAd.product.dimensions.bg[labAd.deviceSize].width);
+
+
+        // log results
+        labAd.log({label: 'fileSelection ', detail: selected, type: 'log' });
+
+        ///////////////////////////////////
+        // 4: return object with details //
+        ///////////////////////////////////
+        return selected;
+      } catch (err) {
+        labAd.log({label: 'fileSelection error: ', detail: err, type: 'error', isFatal: true });
+      }
+    }
+
+    function showExpand(){
+
+        labAd.els.CityStateText.style.display = "none";
+        expandClicktag.addEventListener('click', exitClick);
+
+        labAd.tracking.imp3rdParty1 = "";
+        labAd.tracking.imp3rdParty2 = "";
+
+        try{
+
+            mraid.expand();
+            labAd.els.labAdDiv.style.display = "none";
+            expContainer.style.display = "block";
+            labAd.els.exp.style.backgroundColor = "#5e275e";
+
+            if (labAd.dpr > 3) {
+              labAd.els.Expandbg.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_hp@4x.jpg")';
+              labAd.els.Expandbg1.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_jp@4x.jpg")';
+              labAd.els.Expandbg2.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_trans@4x.jpg")';
+            }else if (labAd.dpr > 2) {
+              labAd.els.Expandbg.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_hp@3x.jpg")';
+              labAd.els.Expandbg1.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_jp@3x.jpg")';
+              labAd.els.Expandbg2.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_trans@3x.jpg")';
+            } else if (labAd.dpr > 1) {
+              labAd.els.Expandbg.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_hp@2x.jpg")';
+              labAd.els.Expandbg1.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_jp@2x.jpg")';
+              labAd.els.Expandbg2.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_trans@2x.jpg")';
+            }else{
+              labAd.els.Expandbg.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_hp@1x.jpg")';
+              labAd.els.Expandbg1.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_jp@1x.jpg")';
+              labAd.els.Expandbg2.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_trans@1x.jpg")';
+            }
+
+            setTimeout(startAnim1,2000)
+
+            mraid.addEventListener("stateChange", function(state) {
+                if (state == 'default') {
+                      hideMraidExpand()
+                }
+            });
+
+            if (labAd.deviceSize == "sm") {
+              labAd.els.Expandbg.style.backgroundPosition = "50% 50%";
+              labAd.els.Expandbg1.style.backgroundPosition = "50% 50%";
+              labAd.els.Expandbg2.style.backgroundPosition = "50% 50%";
+            } else if (labAd.deviceSize == "md"){
+              labAd.els.Expandbg.style.backgroundPosition = "50% 50%";
+              labAd.els.Expandbg1.style.backgroundPosition = "50% 50%";
+              labAd.els.Expandbg2.style.backgroundPosition = "50% 50%";
+            } else if (labAd.deviceSize == "lg") {
+              labAd.els.Expandbg.style.backgroundPosition = "50% 50%";
+              labAd.els.Expandbg1.style.backgroundPosition = "50% 50%";
+              labAd.els.Expandbg2.style.backgroundPosition = "50% 50%";
+            } else if (labAd.deviceSize == "xl") {
+              labAd.els.Expandbg.style.backgroundPosition = "50% 50%";
+              labAd.els.Expandbg1.style.backgroundPosition = "50% 50%";
+              labAd.els.Expandbg2.style.backgroundPosition = "50% 50%";
+
+            }
+
+        }catch(err){
+
+           if (labAd.dpr > 3) {
+              labAd.els.ExpandbgPreview.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_hp@4x.jpg")';
+              labAd.els.ExpandbgPreview1.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_jp@4x.jpg")';
+              labAd.els.ExpandbgPreview2.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_trans@4x.jpg")';
+            }else if (labAd.dpr > 2) {
+              labAd.els.ExpandbgPreview.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_hp@3x.jpg")';
+              labAd.els.ExpandbgPreview1.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_jp@3x.jpg")';
+              labAd.els.ExpandbgPreview2.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_trans@3x.jpg")';
+            } else if (labAd.dpr > 1) {
+              labAd.els.ExpandbgPreview.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_hp@2x.jpg")';
+              labAd.els.ExpandbgPreview1.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_jp@2x.jpg")';
+              labAd.els.ExpandbgPreview2.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_trans@2x.jpg")';
+            }else{
+              labAd.els.ExpandbgPreview.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_hp@1x.jpg")';
+              labAd.els.ExpandbgPreview1.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_jp@1x.jpg")';
+              labAd.els.ExpandbgPreview2.style.backgroundImage = 'url("https://s.w-x.co/cl/misc/cl1856-nxtgim-mrd/universal_expand_trans@1x.jpg")';
+            }
+
+            if (labAd.deviceSize == "sm") {
+              labAd.els.ExpandbgPreview.style.backgroundPosition = "50% 50%";
+              labAd.els.ExpandbgPreview1.style.backgroundPosition = "50% 50%";
+              labAd.els.ExpandbgPreview2.style.backgroundPosition = "50% 50%";
+
+            } else if (labAd.deviceSize == "md"){
+              labAd.els.ExpandbgPreview.style.backgroundPosition = "50% 50%";
+              labAd.els.ExpandbgPreview1.style.backgroundPosition = "50% 50%";
+              labAd.els.ExpandbgPreview2.style.backgroundPosition = "50% 50%";
+
+            } else if (labAd.deviceSize == "lg") {
+              labAd.els.ExpandbgPreview.style.backgroundPosition = "50% 50%";
+              labAd.els.ExpandbgPreview1.style.backgroundPosition = "50% 50%";
+              labAd.els.ExpandbgPreview2.style.backgroundPosition = "50% 50%";
+
+            } else if (labAd.deviceSize == "xl") {
+              labAd.els.ExpandbgPreview.style.backgroundPosition = "50% 50%";
+              labAd.els.ExpandbgPreview1.style.backgroundPosition = "50% 50%";
+              labAd.els.ExpandbgPreview2.style.backgroundPosition = "50% 50%";
+            }
+
+            setTimeout(startAnim,2000)
+            labAd.els.ExpandbgPreview.style.position = "absolute";
+            labAd.els.ExpandbgPreview1.style.position = "absolute";
+            labAd.els.ExpandbgPreview2.style.position = "absolute";
+            labAd.els.expPreview.style.zIndex = "3";
+            labAd.els.expPreview.className = labAd.deviceSize;
+            labAd.els.ExpandbgPreview.className = labAd.deviceSize;
+            labAd.els.ExpandbgPreview1.className = labAd.deviceSize;
+            labAd.els.ExpandbgPreview2.className = labAd.deviceSize;
+
+            expContainerPreview.style.display = "block";
+
+            mraidClose.style.backgroundImage = 'url("https://s.w-x.co/cl/im/apps/nextgen/assets/mraidClose.png")';
+            mraidClose.style.display = "block";
+            labAd.els.previewColRight.appendChild(labAd.els.exp);
+            labAd.els.previewColRight.appendChild(labAd.els.expPreview);
+            labAd.els.Expandbg.style.position = "absolute";
+            labAd.els.Expandbg1.style.position = "absolute";
+            labAd.els.Expandbg2.style.position = "absolute";
+
+            expandClicktag.style.position = "absolute";
+
+            labAd.els.exp.style.zIndex = "11";
+            labAd.els.exp.className = labAd.deviceSize;
+            labAd.els.Expandbg.className = labAd.deviceSize;
+            labAd.els.Expandbg1.className = labAd.deviceSize;
+            labAd.els.Expandbg2.className = labAd.deviceSize;
+            mraidClose.className = labAd.deviceSize;
+            expContainer.style.display = "block";
+
+
+        }
+        getImpPixel(labAd.tracking.imp3rdParty1, 'imp-3rdParty', false);
+        getImpPixel(labAd.tracking.imp3rdParty2, 'imp-3rdParty', false);
+    }
+
+    var clearANim1;
+    function startAnim1(){
+        labAd.els.Expandbg1.style.opacity = '1';
+        clearANim = setTimeout(function(){
+          labAd.els.Expandbg2.style.opacity = '1';
+          clearANim = setTimeout(function(){
+              resetAnim1();
+          },3000)
+        },3000)
+    }
+
+    function resetAnim1(){
+      labAd.els.Expandbg1.style.opacity = '0';
+      labAd.els.Expandbg2.style.opacity = '0';
+      clearANim = setTimeout(function(){
+          startAnim1();
+      },3000)
+    }
+
+    var clearANim1;
+    function startAnim(){
+        labAd.els.ExpandbgPreview1.style.opacity = '1';
+        clearANim = setTimeout(function(){
+          labAd.els.ExpandbgPreview2.style.opacity = '1';
+          clearANim = setTimeout(function(){
+              resetAnim();
+          },3000)
+        },3000)
+    }
+
+    function resetAnim(){
+      labAd.els.ExpandbgPreview1.style.opacity = '0';
+      labAd.els.ExpandbgPreview2.style.opacity = '0';
+      clearANim = setTimeout(function(){
+          startAnim();
+      },3000)
+    }
+
+    function hideExpand(){
+
+        expContainer.style.display = "none";
+        mraidClose.style.display = "none";
+        labAd.els.CityStateText.style.display = "inline-block";
+        labAd.els.exp.style.zIndex = "0";
+        labAd.els.expPreview.style.zIndex = "0";
+        expContainerPreview.style.display = "none";
+        labAd.els.labAdDiv.style.display = "block";
+    }
+
+    function hideMraidExpand(){
+        expContainer.style.display = "none";
+        labAd.els.labAdDiv.style.display = "block";
+    }
+
+    function fireAppEvent(sEventName, oProps) {
+      try {
+        logTime('fireAppEvent-'+ sEventName);
+        // stringify oProps object for use in dispatchAppEvent
+        var payload = JSON.stringify(oProps);
+        admob.events.dispatchAppEvent(sEventName, payload);
+
+        labAd.log({label: 'fireAppEvent ' + sEventName, detail: oProps, type: 'log' });
+      } catch (err) {
+        labAd.log({label: 'fireAppEvent error: '+ sEventName, detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function getData(sMode){
+      try {
+        logTime('getData');
+        // Cases below define steps to get labAd.vars data - based on mode.
+        switch (sMode) {
+          case 'preview':
+          case 'gamPreview':
+            // clear GAM click macro so clicks will work in test modes
+            labAd.macros.gamClick = "";
+
+            // create labAd.preview.vars data set to capture current url params/values
+            labAd.preview.vars = getUrlParams();
+            labAd.log({ "label": 'getUrlParams saved to labAd.preview.vars', "callee": arguments.callee.name, "detail": labAd.preview.vars, "type": 'log' });
+
+            // set labAd.vars
+            labAd.vars = setVarsFromUrlParams(labAd.preview.vars);
+            labAd.log({ "label": 'labAd.vars ', "callee": arguments.callee.name, "detail": labAd.vars, "type": 'log' });
+
+            break;
+          case 'local live':
+            // set labAd.macros using values.js
+            labAd.macros = previewData.setMacros();
+            // set labAd.vars using macro value or default
+            labAd.vars = setVarsFromMacros();
+            labAd.log({ "label": 'setVarsFromMacros: '+ sMode, "callee": arguments.callee.name, "detail": labAd.vars, "type": 'log' });
+            // set url params but do NOT reload page
+            setUrlParams(false);
+            break;
+          default:
+            // set labAd.vars using macro value or default
+            labAd.vars = setVarsFromMacros();
+            labAd.log({ "label": 'setVarsFromMacros: '+ sMode, "callee": arguments.callee.name, "detail": labAd.vars, "type": 'log' });
+            break;
+        }
+
+        // POST VAR updates: make any necessary adjustments/assignments now
+        // that labAd.vars have been set/updated. This is the place to sync
+        // vars with labAd props or to set values that combine multiple vars.
+        labAd.adCond = labAd.vars.cnd.value + '-' + labAd.vars.dynght.value;
+
+        labAd.deviceSize = getDeviceSize(labAd.vars.width.value);
+
+        labAd.dpr = labAd.vars.dpr.value;
+
+        // process tempC here to ensure it only happens once per impression
+        if (labAd.vars.tempC.from !== 'urlSearch' && labAd.vars.tempC.from !== 'getTemp') {
+          labAd.vars.tempC = getTemp(labAd.vars.tempC);
+        }
+
+        // compare deviceSize & dpr values to actual pre-selection values
+        if (labAd.deviceSize !== labAd.vars.deviceSize.value) {
+          labAd.log({ "label": "deviceSize mismatch", "callee": arguments.callee.name, "detail":{"labAd.deviceSize":labAd.deviceSize, "labAd.vars.deviceSize.value":labAd.vars.deviceSize.value}, "type":"log" });
+        }
+
+        if (labAd.dpr !== labAd.vars.dpr.value) {
+          labAd.log({ "label": "dpr mismatch", "callee": arguments.callee.name, "detail":[labAd.dpr, labAd.vars.dpr.value], "type":"log" });
+        }
+
+
+
+      } catch (err) {
+        labAd.log({"callee": arguments.callee.name, label: 'getData error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+
+    function getAdMode() {
+      try {
+        labAd.test.HashParts = getTestHash();
+        // if the zero index === adstest, we go into test mode
+        if (labAd.test.HashParts[0] === "adstest") {
+            labAd.test.mode = 'preview';
+        } else if (labAd.macros.gamPreview === 'true') { // Macro will return true for GAM Creative Preview. Original macro token will be intact during local dev.
+            labAd.test.mode = 'gamPreview';
+        } else {
+            labAd.test.mode = 'live';
+        }
+
+        labAd.log({label: 'getAdMode: ' + labAd.test.mode, detail: labAd.test, type: 'log' });
+        return labAd.test.mode;
+      } catch (err) {
+        labAd.log({label: 'getAdMode error: ', detail: err, type: 'error', isFatal: true });
+      }
+    }
+
+    function getDeviceSize(nWidth){
+      try {
+        // return a value for labAd.deviceSize based on WIDTH of ad slot size
+        // requested. For milli devices, size will be 320x180. All other devices
+        // will be 360x180.
+
+        // default to small & adjust up if needed
+        var sz = 'sm';
+
+        // make sure nWidth is a number - just in case someone passes a string
+        nWidth = Number(nWidth);
+
+        if (nWidth === 320) {
+          sz = 'sm'
+        } else {
+          sz = 'lg'
+        }
+
+        labAd.log({ "label": 'getDeviceSize: '+ sz, "callee": arguments.callee.name, "detail": {'labAd.mode':labAd.mode, 'sz':sz, 'width': nWidth}, "type": 'log' });
+        return sz;
+      } catch (err) {
+        labAd.log({ "label": 'getDeviceSize error: ', "callee": arguments.callee.name, "detail": err, "type": 'error', "isFatal": false });
+      }
+    }
+
+      function getImpPixel(sURL, sEventName) {
+        try {
+            var regexp = /(https?:\/\/[^\s]+)/g; // begins with http:// or https://
+              if(regexp.exec(sURL)) {
+                // if url is valid, add tracking pixel to labTracking
+                var pixel = document.createElement('img');
+                pixel.src = sURL;
+                pixel.alt = sEventName;
+                // add new img to tracking div
+                labAd.els.labTracking.appendChild(pixel);
+                // log success
+                labAd.log({
+                  label: 'getImpPixel: ' + sEventName,
+                  detail: pixel,
+                  type: 'log'
+                });
+              } else {
+                // log error for invalid URL.
+                var eO = {
+                  message: 'sEventName: ' + sEventName
+                };
+                labAd.log({
+                  label: 'getImpPixel - invalid URL: ' + sURL,
+                  detail: eO,
+                  type: 'error',
+                  isFatal: false
+                });
+              }
+            } catch(err) {
+              labAd.log({
+                label: 'getImpPixel error: ',
+                detail: err,
+                type: 'error',
+                isFatal: false
+          });
+        }
+     }
+
+    function getScreenResolution() {
+      var screen = {};
+      screen.dpr = window.devicePixelRatio;
+      screen.width = window.screen.width;
+      screen.height = window.screen.height;
+      screen.resolution = screen.width * screen.dpr + "x" + screen.height * screen.dpr;
+      return screen;
+    }
+
+    function getTestHash(){
+      try {
+        // expected format & order #adstest + cnd + dynght + deviceSize + dpr
+        labAd.test.hashStr = top.window.location.hash.substring(1);
+        // if this is a local file or gamPreview ith no adstest hash, assign default
+        // hashStr value to eliminate need to manually add it to url
+        if ((top.window.location.protocol === 'file:' || labAd.macros.gamPreview === 'true') && labAd.test.hashStr.indexOf('adstest') == -1) {
+          // get actual deviceSize based on macro value to use as defualt
+          labAd.deviceSize = getDeviceSize();
+          // build array of default values mapped to labAd props so changes are automatically picked up here
+          labAd.test.defaultHashParts = ['adstest', labAd.default.cnd, labAd.default.dynght, labAd.deviceSize, labAd.dpr, labAd.default.previewMode,];
+          // set the missing hash by joining parts of this array to assemble default adstest hash string
+          top.window.location.hash = labAd.test.defaultHashParts.join('+');
+          // now get and use the hashtring
+          labAd.test.hashStr = top.window.location.hash.substring(1);
+          labAd.log({label: 'getTestHash defaultHashParts', detail: labAd.test.defaultHashParts, type: 'log' });
+        }
+        // split hash string on '+' delimiter
+        labAd.test.hashArray = labAd.test.hashStr.split("+");
+        // validate by filtering out empty values: "", undefined
+        labAd.test.hashArrayFiltered = labAd.test.hashArray.filter(function (el) {
+          return el != null && el != "";
+        });
+
+        labAd.log({label: 'getTestHash ', detail: labAd.test.hashArrayFiltered, type: 'log' });
+        // return validated and sanitized array of #adstest hash values
+        return labAd.test.hashArrayFiltered;
+      } catch (err) {
+        labAd.log({label: 'getTestHash error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function imgBatchLoad(imgBatch){
+        try {
+          // store latest batch in labAd.imgs and add additional loader properties
+          labAd.imgs[imgBatch.name] = {
+            cb: imgBatch.cbSuccess,
+            cbFail: imgBatch.cbFail,
+            cbFailFired: false,			// flag to ensure callback only fires once if multiple failures in batch
+            loadCount: 0,
+            loadTimer: 0,
+            loadTimeMax: imgBatch.maxLoadTime,
+            loaded: [],
+            toLoad: imgBatch.imgs
+          };
+          // start timer for max allowed time for ALL images in batch to load
+          labAd.imgs[imgBatch.name].loadTimer = setTimeout(function() {
+            var eO = {message:labAd.imgs[imgBatch.name].loadTimeMax + 'ms max load time exceeded.'};
+            labAd.log({label: 'imgBatchLoad timeout: '+ imgBatch.name + ' - ', detail: eO, type: 'error', isFatal: false });
+            // set reason and show static default
+            labAd.default.reason = 'imgBatchLoad - '+ imgBatch.name + '- max load time exceeded';
+            if (!labAd.imgs[imgBatch.name].cbFailFired) {
+              labAd.imgs[imgBatch.name].cbFailFired = true; // set flag so cbFail can only fire once per batch
+              labAd.imgs[imgBatch.name].cbFail(labAd.default.reason);         // execute failure callback
+            }
+          }, labAd.imgs[imgBatch.name].loadTimeMax);
+
+          // load each img with load and error handlers
+          for (var i = 0; i < imgBatch.imgs.length; i++) {
+              var imgObj = new Image();
+              imgObj.id = imgBatch.imgs[i].id; // apply id assigned by imgObj step. This used for JS/CSS hook when img added to DOM in showAd.
+              if (imgBatch.imgs[i].src.indexOf("://") == -1) { // prepend dir when its only the img name
+                  imgObj.src = labAd.dir + imgBatch.imgs[i].src;
+              } else { // use full path
+                  imgObj.src = imgBatch.imgs[i].src;
+              }
+              imgObj.onload = function(){
+                labAd.imgs[imgBatch.name].loadCount++;
+                labAd.imgs[imgBatch.name].loaded.push(this);
+                if (labAd.imgs[imgBatch.name].loadCount === labAd.imgs[imgBatch.name].toLoad.length) { // if all imgs loaded
+                  clearInterval(labAd.imgs[imgBatch.name].loadTimer);
+                  labAd.log({label: 'imgBatchLoad complete: '+ imgBatch.name, detail: labAd.imgs[imgBatch.name], type: 'log' });
+                  // check flag to make sure showDefault hasnt already been called
+                  labAd.imgs[imgBatch.name].cb(labAd.imgs[imgBatch.name].loaded); // execute callback function - pass array of loaded images
+                }
+              };
+              imgObj.onerror = function(err){
+                clearInterval(labAd.imgs[imgBatch.name].loadTimer);
+                labAd.log({label: 'imgBatchLoad - '+ imgBatch.name + ' - error: ' + err.target.src, detail: err, type: 'error', isFatal: false });
+                // set reason and show static default
+                labAd.default.reason = 'imgBatchLoad - '+ imgBatch.name + ' - error: ' + err.target.src;
+                if (!labAd.imgs[imgBatch.name].cbFailFired) {
+                  labAd.imgs[imgBatch.name].cbFailFired = true; // set flag so cbFail can only fire once
+                  labAd.imgs[imgBatch.name].cbFail(labAd.default.reason);         // execute failure callback
+                }
+              };
+          }
+        } catch (err) {
+            labAd.log({label:'imgBatchLoad error on batch: '+ imgBatch.name +' - ', detail: err, type: 'error', isFatal: true });
+        }
+    }
+
+    function imgObj(sId, sSrc, nWidth){
+      try {
+        // adjust dpr as needed
+        var obj = {
+          id: sId,
+          src: sSrc,
+          width: nWidth
+        };
+        // adjust image size of src
+        obj.src = setSrcSize(obj.src, obj.width);
+        // prepend labAd.dir if src is not absolute path
+        if(obj.src.indexOf('://') == -1) {
+          obj.src = labAd.dir + obj.src;
+        }
+        // log results
+        labAd.log({
+          label: 'imgObj ' + sId + ' - ' + sSrc,
+          detail: obj,
+          type: 'log'
+        });
+        return obj;
+      } catch(err) {
+        labAd.log({
+          label: 'imgObj error: ',
+          detail: err,
+          type: 'error',
+          isFatal: true
+        });
+      }
+    }
+
+    function loadAdImages(sBatchName, aImages, nMaxLoadTime){
+      try {
+        // make sure there's at least one image object to load
+        if (aImages.length >= 1) {
+          // create batch loading object defining what to load, now long to wait and what to do on success/failure.
+          var imgBatch = {
+            name: sBatchName,         // label this batch of imgs. Use camelCase. Avoid dashes, dots, etc.
+            imgs: aImages,            // array of img names
+            maxLoadTime: nMaxLoadTime,// how long to wait for everything to load
+            cbSuccess:showAd ,        // callback function to execute once everything loads
+    //        cbSuccess: function(){ setTimeout(showAd, 750); },        // callback function to execute once everything loads
+            cbFail: showDefault       // callback function to execute on timeout or error
+          };
+          // start loading the batch
+          imgBatchLoad(imgBatch);
+          labAd.log({label: 'loadAdImages ', detail: imgBatch, type: 'log' });
+        } else {
+          alert('Integrated Marquee Ads must have at least 1 image in the AD Area.\n\nMake sure aImages array (2nd argument) has at least 1 entry.\n\nUse transparent .png if all content is in the BG file.');
+          labAd.log({label: 'loadAdImages error: ', detail: {message:'aImages array is empty.'}, type: 'error', isFatal: true });
+        }
+      } catch (err) {
+        labAd.log({label: 'loadAdImages error: ', detail: err, type: 'error', isFatal: true });
+      }
+    }
+
+    function logInfo(oInfo){
+      // save to logs array - regardless of type or details
+      this.logs.push(oInfo);
+
+      // console output format will correspond to type of info being logged.
+      // only local files are eligible for console output.
+
+      // steps for error logs
+      if (oInfo.type === 'error') {
+        // save to errors array
+        this.errors.push(oInfo);
+        // always output log errors so they cannot be suppressed/missed due to logLevel
+        console[oInfo.type](oInfo);
+
+
+        // if the error is fatal, call showDefault with label passed as reason
+        if (oInfo.isFatal) {
+          showDefault(oInfo.label);
+        }
+      }else{ // steps for non-error logs
+
+        // console output is only possible if file is local
+        if (window.location.href.indexOf("file://") != -1) {
+          // adjust type/level of output based on labAd.logLevel
+          switch (labAd.logLevel) {
+            case 2:
+              // output every individual log
+              console[oInfo.type](oInfo);
+              break;
+            case 0:
+              // output nothing to console
+              break;
+            default:
+              // clear console since this can fire many times but we only need 1 output for this setting
+              console.clear(); //
+
+              // if there are errors, output them before labAd
+              if (labAd.errors.length > 0) {
+                labAd.errors.forEach(function(err, i){
+                  console.error(err);
+                })
+              }
+
+              // output labAd object for easy inspection
+              console.log(labAd);
+          }
+        };
+      }
+
+      // update labInfo. Example: statefarm-4693437107-1528401281492
+      setLabInfo(this.meta.advertiser + '-' + this.meta.placement + '-' + this.meta.width + 'x' + this.meta.height + '-' + this.time.date, this);
+    }
+
+    function logTime(sName){
+        try {
+          // log timing of key events to time.log for tracking purposes
+          // also return getTime() value so this can be used to get timestamps
+          var d = new Date();
+          var order = Object.keys(labAd.time.log).length;
+          // create new log obj
+          labAd.time.log[sName] = {};
+          // stamp this event
+          labAd.time.log[sName].stamp = d.getTime();
+          // calc split in ms from previous stamp
+          if (sName != 'initAd') {
+            labAd.time.log[sName].split = (labAd.time.log[sName].stamp - labAd.time.stamp);
+          } else {
+            labAd.time.log[sName].split = 0;
+          }
+          // calc elapsed from initAd - in ms
+          labAd.time.log[sName].elapsed = (labAd.time.log[sName].stamp - labAd.time.log['initAd'].stamp);
+          // capture log order to indicate where in sequence this log occured
+          labAd.time.log[sName].order = order;
+
+          // capture timestamp to use for next split
+          labAd.time.stamp = d.getTime();
+
+          return labAd.time.stamp;
+        } catch (err) {
+          labAd.log({label: 'logTime error: ', detail: err, type: 'error', isFatal: false });
+        }
+    }
+
+
+    function setLabInfo(sName, obj) {
+      try {
+        // store passed object to labInfo on parent DOM if possible
+        if (labAd.macros.gamPreview === 'true') {
+          // skip logging if running in DFP Preview
+          return;
+        } else {
+          parent.labInfo = parent.labInfo || {};
+          parent.labInfo[sName] = obj;
+        }
+      } catch (err) {
+        labAd.log({label: 'setLabInfo error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function showAd(aLoadedImages) {
+      try {
+        if (!labAd.displayed) {
+          // flag to prevent ad from displaying multiple times in the event of failure or timeout
+          labAd.displayed = true;
+
+          logTime('showAd');
+          labAd.log({label: 'showAd: ', detail: aLoadedImages, type: 'log' });
+
+          ////////////////////////////////////////////////
+          // 1: Append AD Area (360x105 or 360x140) images to labAdDiv. //
+          ////////////////////////////////////////////////
+          aLoadedImages.forEach(function(elem) {// for each aLoadedImages el: assign CSS and behavior(s) then attach to DOM
+            // add el reference to labAd.els
+            labAd.els[elem.id] = elem;
+            // assign common class to all
+            labAd.els[elem.id].className = 'abs-' + labAd.deviceSize;
+            labAd.els.labAdDiv.className = labAd.deviceSize;
+            // append to labAdDiv
+            labAd.els.labAdDiv.appendChild(labAd.els[elem.id]);
+            // assign specific behavior/format by id
+            if (elem.id === 'btnInv') { // assign click handler to invisible btn
+              labAd.els[elem.id].onclick = showExpand;
+            }
+          });
+
+        } else {
+          var err = {message:'showAd called again.'}
+          labAd.log({label: 'Display routine called after labAd.displayed === true.', detail: err, type: 'error', isFatal: false });
+        }
+      } catch (err) {
+        labAd.log({label: 'showAd error: ', detail: err, type: 'error', isFatal: true });
+      }
+    }
+
+
+    function setSrcSize(sFilename, nWidth) {
+			try {
+        // perform string replacement to adjust from sm to lg image
+        var imgName = decodeURIComponent(sFilename);
+        var adjusted = 'not adjusted.';
+        var fastlyParams = '?width=' + nWidth + "&dpr=" + labAd.dpr;
+
+        if (labAd.deviceSize != 'sm') {
+          // Adjust to larger dimensions for non-small devices
+          if (imgName.indexOf('320x180') != -1) {
+            imgName = imgName.replace('320x180', '360x180');
+            adjusted = "adjusted to 360x180."
+          }
+          if (imgName.indexOf('400x660') != -1) {
+            imgName = imgName.replace('400x660', '500x800');
+            adjusted = "adjusted to 500x800."
+          }
+        }else{
+          adjusted = 'Milli device so no adjustment needed.'
+        }
+
+        // add fastly params to filename
+        imgName += fastlyParams;
+
+        // log success
+        labAd.log({label: 'setSrcSize: '+ adjusted, detail: imgName, type: 'log' });
+
+        return imgName;
+			} catch (err) {
+        labAd.log({label: 'setSrcSize error: ', detail: err, type: 'error', isFatal: false });
+			}
+		}
+
+
+
+    function showBg(bgProps){
+      try {
+        logTime('showBg');
+        ///////////////////////////////////////////////////////////////////
+        // 1: Process BG properties and fireAppEvent based on event name //
+        ///////////////////////////////////////////////////////////////////
+        if (bgProps.eventName === 'adBg') {
+          // Static Image BG - assign props from selected
+          labAd.appBg.baseURL = labAd.dir;
+          // assign selected BG filename & adjust DPR if needed
+          labAd.appBg.imgID = labAd.dirClient + labAd.dirFolder + bgProps.fileName;
+          // set the logical dimensions
+          labAd.appBg.widthDP = labAd.product.dimensions.bg[labAd.deviceSize].width;
+  				labAd.appBg.heightDP = labAd.product.dimensions.bg[labAd.deviceSize].height;
+          // fire the app event passing updated props
+          fireAppEvent('adBg', labAd.appBg);
+        } else { // Video BG
+          // Assign bgProps.fileName overwrite to @2x video bg every time.
+          labAd.appBgVid.vidURL = bgProps.fileName.replace('@1x','@2x');
+          // encode vidURL - because '@' is not compatible with BG app events
+          labAd.appBgVid.vidURL = encodeURIComponent(labAd.appBgVid.vidURL);
+          // prepend labAd.dir to filename to form vidURL
+          labAd.appBgVid.vidURL = labAd.dir + labAd.appBgVid.vidURL;
+          // set the logical dimensions
+          labAd.appBgVid.widthDP = labAd.product.dimensions.bg[labAd.deviceSize].width;
+  				labAd.appBgVid.heightDP = labAd.product.dimensions.bg[labAd.deviceSize].height;
+          // Set the loopCount property
+          labAd.appBgVid.loop = bgProps.loopCount;
+           // fire the app event passing updated props
+          fireAppEvent('adBgVid', labAd.appBgVid);
+        }
+
+        labAd.log({label: 'showBg ', detail: bgProps, type: 'log' });
+      } catch (err) {
+        labAd.log({label: 'showBg error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function showDefault(sReason) {
+      try {
+        if (!labAd.displayed) {
+          // flag to prevent ad from displaying multiple times in the event of failure or timeout
+          labAd.displayed = true;
+
+          logTime('showDefault');
+          labAd.default.reason = sReason;
+          labAd.log({label: 'showDefault: ', detail: labAd.default.reason, type: 'log' });
+
+          if (labAd.mode === 'live') {
+
+          } else {
+            // create error & reason output display for PreviewMode
+            labAd.els.errOutput = document.createElement('div');
+            labAd.els.errOutput.id = 'previewErrorOutput';
+            // create and apppend heading
+            labAd.els.errReason = document.createElement('h1');
+            var t = document.createTextNode(sReason);
+            labAd.els.errReason.appendChild(t);
+            labAd.els.errOutput.appendChild(labAd.els.errReason);
+            // create list
+            labAd.els.errList = document.createElement('ol');
+            // iterate errors and add list item for each
+            labAd.errors.forEach(function(err, i){
+              // create an li & text node for every error
+              var li = document.createElement('li');
+              var lit = document.createTextNode(err.label);
+              li.appendChild(lit);
+              // add li to the ul
+              labAd.els.errList.appendChild(li);
+            });
+
+            // add ul with all list items to output panel
+            labAd.els.errOutput.appendChild(labAd.els.errList);
+            // create footer text
+            var p = document.createElement('footer');
+            p.innerHTML = '<strong>Note:</strong> The list above represents the earliest occuring errors - which should be diagnosed first. <p>Check <code>labAd.errors</code> for a complete set of errors and details.</p>';
+            labAd.els.errOutput.appendChild(p);
+            // empty previewMain and append the errOutput there because GAM Preview
+            // will not permit insertBefore to place the errOutput before other
+            // els in the DOM.
+            labAd.els.previewMain.innerHTML = '';
+            labAd.els.previewMain.appendChild(labAd.els.errOutput);
+            labAd.els.previewMain.style.opacity = 1;
+          }
+
+        } else {
+          var err = {message:'showDefault called again.'}
+          labAd.log({label: 'Display routine called after labAd.displayed === true.', detail: err, type: 'error', isFatal: false });
+        }
+
+      } catch (err) {
+        // not fatal since there's no fallback for this failure.
+        labAd.log({label: 'showDefault error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', initAd, false);
+    </script>
+      <style>
+    /* CORE CSS - DO NOT EDIT  */
+      /* VIEWABILITY FIX ADDED 11/18/19 - DO NOT REMOVE  */
+      html {height: 100%; width: 100%;}
+      body {margin: 0; height: 100%; width: 100%;}
+
+      #labAdDiv {
+        height: 180px;
+        position: relative;
+        margin: 0 auto;
+    }
+
+    #labAdDiv.sm {width: 320px; }
+    #labAdDiv.md, #labAdDiv.lg, #labAdDiv.xl {width: 360px;}
+
+
+
+  /* Ad Slot Size & Position */
+  .abs-sm {width: 320px; height: 180px; position: absolute; }
+  .abs-md, .abs-lg, .abs-xl {width: 360px; height: 180px; position: absolute;}
+
+
+  .preview #labAdDiv.sm {width: 300px; bottom: 240%;}
+  .preview #labAdDiv.md, .preview #labAdDiv.lg, .preview #labAdDiv.xl {width: 360px; left: 5%; bottom: 230%;}
+
+
+    /* Ad Slot Size & Position */
+    .preview .abs-sm { left: -8px; top: 23px;}
+    .preview .abs-md { left: -17px; top: 154px;}
+
+    .preview .abs-lg { left: -19px; top: -48px;}
+
+    .preview .abs-xl { left: -19px; top: 15px;}
+
+    /* Foreground element Size */
+    .preview #fgGrid.abs-sm { width: 320px; height: 180px;}
+    .preview #fgGrid.abs-md, .preview #fgGrid.abs-lg, .preview #fgGrid.abs-xl { width: 360px; height: 180px;}
+
+    /* Foreground element Position */
+    .preview #fgGrid.abs-md {top: 190px; left: -16px;}
+    .preview #fgGrid.abs-lg {top: -15px;}
+    .preview #fgGrid.abs-xl {top: 49px;}
+
+
+      #btnInv {
+        z-index: 10;
+        cursor: pointer;
+        /* background: rgba(255,255,255, .25); */
+      }
+
+      .hidden{opacity: 0;}
+    /* END: CORE CSS - DO NOT EDIT  */
+
+    /* Preview Mode CSS - DO NOT EDIT – VIEWABILITY FIX ADDED 11/18/19 */
+      #previewMainContainer{opacity: 0; display: none;}
+      #previewAltContainer{display: none;}
+    /* END: Preview Mode CSS - DO NOT EDIT */
+    #expContainer{
+        position: relative;
+        width: 100%;
+        height: auto;
+        margin: 0 auto;
+        top: 0;
+        display: none;
+        /* background-color: #5e275e; */
+        overflow: hidden;
+    }
+
+    #expContainer.sm{
+      width: 323px;
+      height: 586px;
+      top: 132px;
+      /* z-index: 11; */
+    }
+
+    #expContainer.md{
+      width: 373px;
+      height: 635px;
+      top: 124px;
+      /* z-index: 11; */
+    }
+
+    #expContainer.lg{
+      width: 375px;
+      height: 812px;
+      top: 29px;
+      /* z-index: 3; */
+    }
+
+    #expContainer.xl{
+      width: 390px;
+      height: 829px;
+      top: 46px;
+      /* z-index: 3; */
+    }
+
+    #expContainerPreview{
+        position: relative;
+        /* width: 100%;
+        height: 100%; */
+        margin: 0 auto;
+        display: none;
+        /* background-color: #3095d1; */
+        overflow: hidden;
+    }
+
+    #expContainerPreview.sm{
+      width: 325px;
+      height: 567px;
+      top: -455px;
+      /* z-index: 11; */
+    }
+
+    #expContainerPreview.md{
+      width: 383px;
+      height: 685px;
+      top: -527px;
+      /* z-index: 11; */
+    }
+
+    #expContainerPreview.lg{
+      width: 376px;
+      height: 817px;
+      top: -777px;
+      /* z-index: 3; */
+    }
+
+    #expContainerPreview.xl{
+      width: 416px;
+      height: 897px;
+      top: -791px;
+      /* z-index: 3; */
+    }
+
+    #Expandbg{
+        position: fixed;
+        width: 100%;
+        height: auto;
+        left: 0;
+        right: 0;
+        bottom:0;
+        top: 0;
+        margin: auto;
+        background-size: cover;
+        background-repeat: no-repeat;
+        opacity: 1;
+
+        -webkit-transition: opacity 1s ease-out;
+        -moz-transition: opacity 1s ease-out;
+        transition: opacity 1s ease-out;
+    }
+
+    #Expandbg1,#Expandbg2{
+        position: fixed;
+        width: 100%;
+        height: auto;
+        left: 0;
+        right: 0;
+        bottom:0;
+        top: 0;
+        margin: auto;
+        background-size: cover;
+        background-repeat: no-repeat;
+        opacity: 0;
+
+        -webkit-transition: opacity 1s ease-out;
+        -moz-transition: opacity 1s ease-out;
+        transition: opacity 1s ease-out;
+    }
+
+    #ExpandbgPreview{
+        position: fixed;
+        width: 100%;
+        height: auto;
+        left: 0;
+        right: 0;
+        bottom:0;
+        top: 0;
+        margin: auto;
+        background-size: cover;
+        opacity: 1;
+
+        -webkit-transition: opacity 1s ease-out;
+        -moz-transition: opacity 1s ease-out;
+        transition: opacity 1s ease-out;
+    }
+
+    #ExpandbgPreview1,#ExpandbgPreview2{
+        position: fixed;
+        width: 100%;
+        height: auto;
+        left: 0;
+        right: 0;
+        bottom:0;
+        top: 0;
+        margin: auto;
+        background-size: cover;
+        opacity: 0;
+
+        -webkit-transition: opacity 1s ease-out;
+        -moz-transition: opacity 1s ease-out;
+        transition: opacity 1s ease-out;
+    }
+
+    #Expandbg.sm{
+      /*top:-15px;*/
+    }
+
+    #ExpandbgPreview.sm{
+      /*top:-125px;*/
+    }
+
+    #mraidClose {
+      position: absolute;
+      background-position: center;
+      background-size: cover;
+      top: 0px;
+      right: 0px;
+      width: 30px;
+      height: 30px;
+      display: none;
+      cursor: pointer;
+    }
+
+    #mraidClose.lg{
+      top: 15px;
+      right: 15px;
+    }
+
+
+    .expandClicktag{
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+    </style>
+  </head>
+
+  <body>
+    <!-- #labAdDiv is the main container for all AD elements -->
+    <div id="labAdDiv"></div>
+    <div id="expContainerPreview" class="expContainerPreview">
+      <div id="ExpandbgPreview" class="ExpandbgPreview"></div>
+      <div id="ExpandbgPreview1" class="ExpandbgPreview"></div>
+      <div id="ExpandbgPreview2" class="ExpandbgPreview"></div>
+    </div>
+
+
+    <div id="expContainer" class="expContainer">
+      <div id="Expandbg" class="Expandbg"></div>
+      <div id="Expandbg1" class="Expandbg"></div>
+      <div id="Expandbg2" class="Expandbg"></div>
+
+      <div id="expandClicktag" class="expandClicktag"></div>
+      <div id="mraidClose" class="mraidClose"></div>
+    </div>
+
+    <!-- Container for all tracking pixels - manually placed or dynamically generated. -->
+    <div id="labTracking" style="display:none;">
+      <!-- 3P IAS OR MOAT TRACKING GOES HERE IF APPLICABLE -->
+
+    </div>
+
+    <!-- Preview Mode Structure - DO NOT EDIT -->
+    <div id="previewMainContainer">
+      <!-- LEFT FORM COL -->
+      <div id="previewColLeft">
+        <hr> <img id="previewFormLogo" src="" alt="IBM Watson Advertising">
+        <hr>
+        <p id="previewFormProduct"> Mobile App Integrated Marquee </p>
+        <hr>
+        <p id="previewFormClientName"> Client Name Here </p>
+        <hr>
+        <div id="previewFormDeviceSize">
+          <p>Device Size</p>
+          <!-- // added this for XL sizes preview - wodev comment-->
+          <input type="radio" name="deviceSize" value="sm" id="deviceSmall">
+          <label for="deviceSmall" id="label-01">SM</label>
+          <input type="radio" name="deviceSize" value="md" id="deviceMedium">
+          <label for="deviceMedium" id="label-02">RG</label>
+          <input type="radio" name="deviceSize" value="lg" id="deviceLarge">
+          <label for="deviceLarge" id="label-03">LG</label>
+          <input type="radio" name="deviceSize" value="xl" id="deviceXLarge">
+          <label for="deviceXLarge" id="label-04">XL</label>
+
+            <!-- // added this for medium sizes preview - wodev comment -->
+        </div>
+        <hr>
+        <div id="previewFormCondition">
+          <div id="btnPrevCond"><img src="https://s.w-x.co/cl/wxcl/preview-mode/idd/prev.png" /></div>
+              <div id="txtCondName"></div>
+          <div id="btnNextCond"><img src="https://s.w-x.co/cl/wxcl/preview-mode/idd/next.png" /></div>
+          </div>
+          <hr>
+          <div id="previewFormConditionIndex"></div>
+
+
+
+        </div>
+
+
+        <!-- RIGHT AD COL  -->
+        <div id="previewColRight">
+          <div id="previewAppOverlay">
+            <!-- previewAppOverlay = newer layout with images for device and app ui. -->
+            <div id="previewDeviceToggleBtn"></div>
+            <div id="previewDeviceOverlay"></div>
+            <!-- START: ADD THIS for city, state textfield -->
+            <div id="previewCityStateOverlay">
+              <input type="text" id="cityStateInput" value="Durango, CO" readonly>
+            </div>
+    		     <!-- END: ADD THIS for city, state textfield -->
+                <div id="previewUiCon">
+            <div id="previewUiOverlay"></div>
+          </div>
+                <div id="previewUiFCOverlay"></div>
+                <div id="previewBlockerBottom"></div>
+          </div>
+          <div id="previewAppLayout">
+            <!-- previewAppLayout (previously previewAppContainer) = older layout with colored divs representing different regions of app. -->
+            <div id="previewAppHeader"></div>
+            <div id="previewAppToggle"></div>
+            <div id="previewAppChart"></div>
+            <div id="previewAppInsight"></div>
+            <div id="previewAppGradient"></div>
+            <div id="previewAppNav"></div>
+            <div id="previewAppCoverRight"></div>
+            <div id="previewAppCoverLeft"></div>
+          </div>
+          <!-- End Right Column -->
+        </div>
+      </div>
+      <div id="previewAltContainer"> <img id="previewAltLogo" src="" alt="IBM Watson Advertising">
+        <p>Please increase browser width to view creative preview form.</p>
+      </div>
+
+  </body>
+</html>

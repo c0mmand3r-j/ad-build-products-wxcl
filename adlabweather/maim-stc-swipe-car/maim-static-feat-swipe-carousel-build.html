@@ -1,0 +1,3508 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wendys - Fastly</title>
+    <script src="//media.admob.com/api/v1/google_mobile_app_ads.js"></script>
+    <script src="https://hammerjs.github.io/dist/hammer.min.js"></script>
+    <script>
+    var labAd = {
+      adCond: null,
+      mode: null,
+      meta:{
+        jiraID: 'tcl2269', //Example: The name of the JIRA ID
+        projectName: 'Wendys National Breakfast - Q1 - Mobile App Integrated Marquee (Static, Swipe/Carousel)', //CVS Stores Preseason (Week Ahead SPON)
+        advertiser: 'Wendys - Fastly Beta', // Ex: 'mcdonalds'
+        placement: '', // Ex: 'ros-shopper-moms'
+        created: '10-09-2019', // Ex: '08-23-2018'
+        modified: '7-20-2022', // change when base code changes to current date of change
+        designer: 'cdegroot', // Ex: 'coreyd'
+        dev: 'JamesB' //Ex: 'dks'
+      },
+      product:{
+        version: 'v2.3-beta', //This will reflect the Github Version on the stable branch
+        type: 'static', // 'static', 'animated'
+        interactive: 'swipe-carousel', // EX: 'locator', 'vertical-video', 'swipe-carousel', etc.
+        adaptor: '',  //EX: 'temp-range', 'temp-comparison', 'countdown', etc.
+        dimensions:{
+          ad:{
+            //default for milli devices
+            sm: {width:320, height:180},
+            //default for milli devices
+            //default for kilo devices
+            md: {width:360, height:180},
+            lg: {width:360, height:180},
+            xl: {width:360, height:180}
+          },
+          bg:{
+            //default for milli devices
+            sm: {width:400, height:660},
+            //default for kilo devices
+            md: {width:500, height:800},
+            lg: {width:500, height:800},
+            xl: {width:500, height:800}
+          }
+        },
+        platforms: ['android', 'ios']// 'ios', 'android', 'web', 'mw'
+      },
+
+      appBg: { // object passed to AppEvent - do not add new properties to this object.
+        baseURL: '',
+        //imgID: 'wendys/tcl2269-ma-im-swpcar/400x660_WEN_bg-cld-d@1x.jpg'
+        imgID: '400x660_WEN_bg-cld-d.jpg'
+        // This unique 'ID' gets pushed to the payload by the function showBg(bgProps).
+        // This 'imgID' needs to be unique so that there aren't any appBG caching issues in app.
+        // showBg() decalres 'imgID' as a unique string by concatenating the asset directory before the filename.
+      },
+      appBgVid: { // object passed to AppEvent - do not add new properties to this object.
+        vidURL: '' // Ex:'414x210-clear_day@1x.mp4' - @1x filename only for initial assignment. labAd.dir prepended before sending to app event.
+      },
+      deviceSize:'sm', // sm, md, lg, xl
+      dir: 'https://s.w-x.co/cl/', //// HACK:  //***NOTE***: This is the standard COS directory, This doesn't change.
+    	dirClient: 'wendys/', //Ex: applebees/ Name of the client folder
+    	dirFolder: 'tcl2269-ma-im-swpcar/', //Ex: tcl2162-ma-if-stc/  folder that all the assets live in
+    	dpr: window.devicePixelRatio.toString(),
+
+      foregroundElements: {
+        addFg: false, // Set to true if Foreground element is needed | False if no Foreground element is needed
+        fimg: 'https://s.w-x.co/cl/wxcl/prototype/maim/gridlines/320x180-fg-defbg.png' // using transparent png since everything is baked into BG image
+      },
+
+      default: {
+        cnd: 'cld',
+        dynght: 'D',
+        img:'https://s.w-x.co/cl/test/1x1_test.png', // using transparent png since everything is baked into BG image
+        previewMode: 'o',
+        reason:'na' // 'na' is default
+      },
+      displayed: false, // flag indicating showAd or showDefault has executed successfully.
+      selected: {        // for tracking selected values
+        adImages:[],
+        bgEvent:'adBg', // Ex: 'adBg' or 'adBgVid' - set based on ad concept.
+        scenario: 'na'
+      },
+      els: {},
+      errors: [],
+      imgs: {},
+      log: logInfo,
+      logLevel: 1, // 0 = none, 1 = labAd, 2 = everything
+      logs: [],
+
+      macros: { // macros populated by GAM when ad is served
+        cnd: "%%PATTERN:cnd%%", // current condition.
+        temp: "%%PATTERN:tmpc%%", //current temperature celcius
+        dynght: "%%PATTERN:dynght%%", // day or night? Possible values: 'D', 'N'
+        height: "%%HEIGHT%%", // ad slot height
+        width: "%%WIDTH%%", // ad slot width
+        plat: "%%PATTERN:plat%%", // platform. Used for tracking
+        timeframe: "%%PATTERN:tf%%", // timeframe. Used for tracking
+        gamClick: "%%CLICK_URL_UNESC%%", // Google Ad Manager click track URL
+        gamPreview: '%%PREVIEW_MODE%%',
+        cid: "%ecid!", // creative id
+        lid: "%eaid!", // line item id
+        ord: '%%CACHEBUSTER%%',
+        orderID: '%ebuy!',
+        ADunit: '%%ADUNIT%%',
+        loc: "%%PATTERN:zip%%"   // contextual location
+      },
+
+      preview:{
+          css:{id:'previewCSS', href:'preview-features-maim-v4.css', dir:'hostedcss'},
+          dirs:{
+            hostedAssets:'https://s.w-x.co/cl/wxcl/preview-mode/maim/assets/v2/',
+            hostedjs:'https://s.w-x.co/cl/wxcl/preview-mode/maim/js/',
+            hostedcss:'https://s.w-x.co/cl/wxcl/preview-mode/maim/css/',
+            localAssets:'preview-mode/assets/',
+            localjs:'preview-mode/js/',
+            localcss:'preview-mode/css/'
+          },
+      images:[
+        // NOTE: images.src values use split('-'). Extraneous '-' in filenames will cause issues.
+        // Standard Preview Images & Conditions
+        {id: 'logo', type:'logo', src: 'all-logo-watson-ads.png', dir: 'hostedAssets'},
+        {id: 'device', type:'device', src: 'lg-device.png', dir: 'hostedAssets'},
+
+        //for devices uis'
+        {id: 'ui-clr+D', type:'ui', src: 'lg-ui-clear-day.png', dir: 'hostedAssets'},
+        {id: 'ui-clr+N', type:'ui', src: 'lg-ui-clear-night.png', dir: 'hostedAssets'},
+        {id: 'ui-cld+D', type:'ui', src: 'lg-ui-cloudy-day.png', dir: 'hostedAssets'},
+        {id: 'ui-cld+N', type:'ui', src: 'lg-ui-cloudy-night.png', dir: 'hostedAssets'},
+        {id: 'ui-rain+D', type:'ui', src: 'lg-ui-rainy-day.png', dir: 'hostedAssets'},
+        {id: 'ui-rain+N', type:'ui', src: 'lg-ui-rainy-night.png', dir: 'hostedAssets'},
+        {id: 'ui-snow+D', type:'ui', src: 'lg-ui-snowy-day.png', dir: 'hostedAssets'},
+        {id: 'ui-snow+N', type:'ui', src: 'lg-ui-snowy-night.png', dir: 'hostedAssets'}
+      ]
+    },
+      promises: {},
+      test: {},
+      time: {
+        log:{},
+        stamp:0 // most recent getTime. Updated when logTime is called.
+      },
+      tracking: {
+        clickTag: 'https://www.weather.com/', // Ex: 3rd party click tracker
+        imp3rdParty: 'https://s.w-x.co/cl/test/1x1_test.png', // Ex: 3rd party impression tracker img src
+        imp3rdParty1: 'https://s.w-x.co/cl/test/1x1_test.png' // Ex: 3rd party impression tracker img src
+      },
+
+    isMobile: {
+      Android: function() {
+        return navigator.userAgent.match(/Android/i);
+      },
+      BlackBerry: function() {
+        return navigator.userAgent.match(/BlackBerry/i);
+      },
+      iOS: function() {
+        return navigator.userAgent.match(/iPhone|iPad|iPod/i);
+      },
+      Opera: function() {
+        return navigator.userAgent.match(/Opera Mini/i);
+      },
+      Windows: function() {
+        return navigator.userAgent.match(/IEMobile/i);
+      },
+      any: function() {
+        return (labAd.isMobile.Android() || labAd.isMobile.BlackBerry() || labAd.isMobile.iOS() || labAd.isMobile.Opera() || labAd.isMobile.Windows());
+      }
+    },
+
+    vars:{
+     cnd:{value:'', default:'clr', macro:'macros.cnd'},
+     dynght:{value:'', default:'D', macro:'macros.dynght'},
+     deviceSize:{value:'', default:'sm', macro:'deviceSize'},
+     dpr:{value:'', default:'1', macro:'dpr'},
+     previewMode:{value:'', default:'o', macro:null},
+     tempC:{value:'', default:'8', macro:'macros.tempC'},
+     height:{value:'', default:'210', macro:'macros.height'},
+     width:{value:'', default:'320', macro:'macros.width'}
+   }
+ }
+    var hammerOptions = {
+          domEvents: true
+        },
+        hammerTime_labAd;
+
+    function initAd() {
+      try {
+        // init date & time
+        labAd.time.date = new Date();
+        logTime('initAd');
+
+        // init labAd props and els - especially those needed for tracking and timing operations
+        labAd.els.labAdDiv = document.getElementById('labAdDiv');
+        labAd.els.labTracking = document.getElementById('labTracking');
+        hammerTime_labAd = new Hammer(parent.document.getElementById('swipeCar'), hammerOptions);
+
+        // request overall tracking.
+        getImpPixel(labAd.tracking.imp3rdParty, 'imp-3rdParty', false);
+
+        // get ad mode to determine if vars populated by macros or test hash
+        labAd.mode = getAdMode();
+
+        // populate vars from the correct source for mode
+        initAdMode(labAd.mode);
+
+        // determine adCond based on cnd and dynght values
+        labAd.adCond = labAd.macros.cnd + '-' + labAd.macros.dynght;
+
+        // init loader method for scripts, imgs and link els
+        initLoader();
+
+        // if Preview Mode, load resources needed, then init Preview Mode.
+        if (labAd.mode === 'preview' || labAd.mode === 'gamPreview') {
+          // group loader calls in array so they share the same callback
+          var sPathjs = labAd.preview.dirs.hostedjs; // .standard, .customDir or .local
+          var sPathcss = labAd.preview.dirs.hostedcss; // .standard, .customDir or .local
+          var aPreviewPromises = [
+            labAd.loader.js({src: sPathjs + 'preview-maim-v4.js', append: true}),
+            labAd.loader.css({src: sPathcss + 'preview-features-maim-v4.css', append: true})
+          ];
+
+          // use promise.all to execute callback when all promises are fulfilled
+          labAd.promises.previewResources = Promise.all(aPreviewPromises).then(function(result) {
+            // log success result
+            labAd.log({label:'aPreviewPromises fulfilled. ', detail: result, type: 'log'});
+            // complete init PreviewMode now that resources are loaded
+            labAd.preview.init();
+          }).catch(function(err) {
+             labAd.log({label: 'aPreviewPromises file load error: ', detail: err, type: 'error', isFatal: true });
+          });
+        } else { // else proceed to display using ad served
+          initDisplay(labAd.adCond);
+        }
+      } catch (err) {
+        labAd.log({label: 'initAd error: ', detail: err, type: 'error', isFatal: true });
+      }
+      }
+
+    function initAdMode(sMode){
+      try {
+        var result = '';
+        // Cases below should define adjustments needed for test modes supported by ad.
+        switch (sMode) {
+          case 'preview':
+          case 'gamPreview':
+            // clear GAM click macro so clicks will work in test modes
+            labAd.macros.gamClick = "";
+            // assign values from HashParts - hash order is adstest + cnd + dynght + deviceSize + DPR + previewMode
+            labAd.macros.cnd = labAd.test.HashParts[1];
+            labAd.macros.dynght = labAd.test.HashParts[2].toUpperCase();
+            labAd.deviceSize = labAd.test.HashParts[3].toLowerCase();
+
+            // get dpr from hash if not undefined, otherwise use window property
+            labAd.dpr = (labAd.test.HashParts[4] != undefined) ? Number(labAd.test.HashParts[4]) : window.devicePixelRatio;
+
+          //small mode
+            if (labAd.deviceSize !== 'sm') {
+              labAd.meta.width = 360;
+            }
+            break;
+          default: // covers 'live' and 'none'
+          labAd.deviceSize = getDeviceSize(labAd.macros.width);
+            break;
+        }
+      		// log result
+      		result = labAd.mode + ' activated';
+      		 labAd.log({label: 'initAdMode ', detail: result, type: 'log' });
+      } catch (err) {
+      		 labAd.log({label: 'initAdMode error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function initDisplay(sCond){
+      logTime('initDisplay');
+      try {
+        // start the display routine by firing appEvent, selecting files, loading AD & BG images
+        // fire adIM event asap so the app knows to push the feed card down
+        fireAppEvent('adIM', {});
+        // select files needed for AD & BG display.
+        labAd.selected = fileSelection(sCond);
+        // 1: showBg - should be called first since it cannot be preloaded.
+        // labAd.selected.bg properties will be used to package & send .
+        showBg(labAd.selected.bg);
+        // create an array of img promises to be loaded together
+        labAd.promises.adImages = [];
+        // create a loader.img instance for each selected img
+        labAd.selected.adImages.forEach(function(imgObj){
+          // add each individual promise to the collection
+          labAd.promises.adImages.push(labAd.loader.img(imgObj));
+        });
+        // use promise.all to execute callback when all promises are fulfilled
+    		labAd.promises.allAdImages = Promise.all(labAd.promises.adImages).then(function(aLoadedImages) {
+    			// log success aLoadedImages
+    			labAd.log({label:'labAd.promises.allAdImages fulfilled. ', detail: aLoadedImages, type: 'log'});
+    			// call showAd and pass the successfully loaded Image els that still
+    			// need to be added to the DOM
+    			showAd(aLoadedImages);
+    		}).catch(function(err) {
+    			labAd.log({label: 'labAd.promises.allAdImages file load error: ', detail: err, type: 'error', isFatal: true });
+    		});
+    		labAd.log({label: 'initDisplay ', detail: sCond, type: 'log' });
+    	} catch (err) {
+    		 labAd.log({label: 'initDisplay error: ', detail: err, type: 'error', isFatal: false });
+    	}
+    }
+
+    function initLoader(){
+      try {
+        // initLoader: creates labAd.loader - which is a method that returns a function for loading resources using a Promise to determine success or failure. Currently supports script, link & img els. All different types can be loaded with the same callback.
+        logTime('initLoader');
+        labAd.loader = (function() {
+          // Function which returns a function: https://davidwalsh.name/javascript-functions
+          function _load(tag) {
+            return function(loadObj) {
+              // This promise will be used by Promise.all to determine success or failure
+              return new Promise(function(resolve, reject) {
+                var element;
+                var parent = 'body';
+                var attr = 'src';
+
+                // Adjust element type & attributes depending on tag type
+                switch(tag) {
+                  case 'img':
+                    element = new Image();
+                    element.id = loadObj.id;
+                    element.src = loadObj.src;
+                    break;
+                  case 'script':
+                    element = document.createElement(tag);
+                    element.async = true;
+                    break;
+                  case 'link':
+                    element = document.createElement(tag);
+                    element.type = 'text/css';
+                    element.rel = 'stylesheet';
+                    attr = 'href';
+                    parent = 'head';
+                    break;
+                }
+                // Important success and error for the promise
+    						element.onload = function() {
+    							labAd.log({label: tag + ' loaded ', detail: {lO:loadObj, el:element, t:tag}, type: 'log' });
+                  // resolve the promise & return the element
+                  resolve(element);
+                };
+                element.onerror = function(err) {
+                  labAd.errors.push(err);
+                  reject(err);
+                };
+                // if append is true, element needs to be added to DOM immediately
+                // doing this & applying src will cause the resource to load but
+                // the Promise controls what happens next.
+                if (loadObj.append) {
+                  // apply the source & add to DOM
+                  element[attr] = loadObj.src;
+                  document[parent].appendChild(element);
+                }
+
+              });
+            };
+          }
+
+          return {
+            css: _load('link'),
+            js: _load('script'),
+            img: _load('img')
+          }
+        })();
+
+        labAd.log({label: 'initLoader ', detail: labAd.loader, type: 'log' });
+      } catch (err) {
+        labAd.log({label: 'initLoader error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function exitClick(event) {
+      try {
+        event.preventDefault();
+        var id = event.target.id;
+        var url = labAd.tracking.clickTag;
+        var target = "_blank";
+        var clickTime = logTime('exitClick');
+        var btnPos = labAd.els.btnInv.getBoundingClientRect();
+        labAd.log({label: 'exitClick from: ' + id, detail: url, type: 'log' });
+        // launch clickthrough window
+        window.open(labAd.macros.gamClick + url, target);
+
+        // alert(JSON.stringify(labAd, null, 1)); // HACK: remove from final code
+      } catch (err) {
+        labAd.log({label: 'exitClick error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function getDeviceSize(nWidth) {
+    	try {
+    		// return a value for labAd.deviceSize based on WIDTH of ad slot size
+    		// requested. For milli devices, size will be 320x180. All other devices
+    		// will be 360x180.
+    		// default to small & adjust up if needed
+    		var sz = 'sm';
+    		// make sure nWidth is a number - just in case someone passes a string
+    		nWidth = Number(nWidth);
+    		if(nWidth === 320) {
+    			sz = 'sm'
+    		} else {
+    			sz = 'lg'
+    		}
+    		labAd.log({
+    			label: 'getDeviceSize: ' + sz,
+    			"callee": arguments.callee.name,
+    			"detail": {
+    				'labAd.mode': labAd.mode,
+    				'sz': sz,
+    				'width': nWidth
+    			},
+    			"type": 'log'
+    		});
+    		return sz;
+    	} catch (err) {
+    		labAd.log({
+    			label: 'getDeviceSize error: ',
+    			"callee": arguments.callee.name,
+    			"detail": err,
+    			"type": 'error',
+    			"isFatal": false
+    		});
+    	}
+    }
+
+
+    function fileSelection(sCond){
+      try {
+        // selected is a return object containing all relevant details needed to
+        // complete the ad display process.
+        var selected = {
+          adImages: [], // array of AD images to be loaded
+          bg: {
+            eventName: '', // string name AppEvent: 'adBg' or 'adBgVid'
+            fileName: '', // string filename of the selected BG image or video
+            loopCount: 0 // number of times to loop BG video
+          },
+          scenario: '' // string name representing the selected scenario
+        };
+
+        /////////////////////////////////////////////////////////
+        // 1: Assign values used for most or all scenarios //
+        /////////////////////////////////////////////////////////
+        // NOTE: since there's only one image in the AD region for this creative,
+        // its also assigned as the static default - which is why the line below
+        // references that instead of just using the filename string. Also, the
+        // id is being set to 'btnInv' so it will inherit the click handler that
+        // that might be assigned to a transparent png in a more complex ad.
+        selected.adImages.push(imgObj('btnInv', labAd.default.img, labAd.product.dimensions.ad[labAd.deviceSize].width));
+        selected.bg.eventName = 'adBg';
+
+
+        ///TOGGLE FOR ADDING FOREGROUND ELEMENT(S)//
+        var fgele = labAd.foregroundElements.addFg;
+        if (fgele === true){
+          selected.adImages.push(imgObj('fgGrid', labAd.foregroundElements.fimg, labAd.product.dimensions.ad[labAd.deviceSize].width) );
+        }else if (fgele === false) {
+          //DONT PUSH ANYTHING TO THE DOM
+        };
+
+        //////////////////////////////////////////////
+        // 2: Assign BG image/video to appBg or appBgVid //
+        //////////////////////////////////////////////
+
+        sCond = sCond.toLowerCase();
+        switch (sCond) {
+          case 'sun-d':
+          case 'clr-d':
+            selected.scenario = 'Clear Day';
+            selected.bg.fileName = '400x660_WEN_bg-clr-d.jpg';
+
+            selected.adImages.push( imgObj('cta', '320x180-CTA.png') );
+
+            selected.adImages.push( imgObj('rBtn', '320x180-next-btn.png') );
+            selected.adImages.push( imgObj('lBtn', '320x180-prev-btn.png') );
+
+            if (labAd.deviceSize == 'sm') {
+
+              var inAd1 = document.getElementById('labAdDiv');
+
+              var inAd2 = document.createElement("div");
+              inAd2.id = 'labAdDivIn';
+              inAd2.classList.add("sm");
+              inAd1.appendChild(inAd2);
+
+              var inAd21 = document.getElementById('labAdDivIn');
+
+              var inAdimg5 = document.createElement("img");
+              inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder + "320x180-food-black-Sausage-EggandSwissCroissant.png";
+              inAdimg5.id = 'object6';
+              inAdimg5.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg5);
+
+              var inAdimg4 = document.createElement("img");
+              inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-Sausage-Egg-CheeseBiscuit.png";
+              inAdimg4.id = 'object5';
+              inAdimg4.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg4);
+
+              var inAdimg3 = document.createElement("img");
+              inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-MapleBaconChickenCroissant.png";
+              inAdimg3.id = 'object4';
+              inAdimg3.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg3);
+
+              var inAdimg2 = document.createElement("img");
+              inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-Frosty-ccino.png";
+              inAdimg2.id = 'object3';
+              inAdimg2.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg2);
+
+              var inAdimg1 = document.createElement("img");
+              inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-HoneyButterChickenBiscuit.png";
+              inAdimg1.id = 'object2';
+              inAdimg1.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg1);
+
+              var inAdimg = document.createElement("img");
+              inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-BreakfastBaconator.png";
+              inAdimg.id = 'object1';
+              inAdimg.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg);
+
+              if (labAd.dpr > 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-BreakfastBaconator.png";
+                adjusted = 'adjusted to 4x.';
+              } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-BreakfastBaconator.png";
+                adjusted = 'adjusted to 3x.';
+              } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-black-BreakfastBaconator.png";
+                adjusted = 'adjusted to 2x.';
+              } else {
+                // no adjustment required since default is '@1x'
+              }
+
+
+
+            } else {
+
+              var inAd1 = document.getElementById('labAdDiv');
+
+              var inAd2 = document.createElement("div");
+              inAd2.id = 'labAdDivIn';
+              inAd1.appendChild(inAd2);
+
+              var inAd21 = document.getElementById('labAdDivIn');
+
+              var inAdimg5 = document.createElement("img");
+              inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-Sausage-EggandSwissCroissant.png";
+              inAdimg5.id = 'object6';
+
+              inAd21.appendChild(inAdimg5);
+
+              var inAdimg4 = document.createElement("img");
+              inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-Sausage-Egg-CheeseBiscuit.png";
+              inAdimg4.id = 'object5';
+
+              inAd21.appendChild(inAdimg4);
+
+              var inAdimg3 = document.createElement("img");
+              inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-MapleBaconChickenCroissant.png";
+              inAdimg3.id = 'object4';
+
+              inAd21.appendChild(inAdimg3);
+
+              var inAdimg2 = document.createElement("img");
+              inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-Frosty-ccino.png";
+              inAdimg2.id = 'object3';
+
+              inAd21.appendChild(inAdimg2);
+
+              var inAdimg1 = document.createElement("img");
+              inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-HoneyButterChickenBiscuit.png";
+              inAdimg1.id = 'object2';
+
+              inAd21.appendChild(inAdimg1);
+
+              var inAdimg = document.createElement("img");
+              inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-BreakfastBaconator.png";
+              inAdimg.id = 'object1';
+
+              inAd21.appendChild(inAdimg);
+
+              if (labAd.dpr > 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-BreakfastBaconator.png";
+                adjusted = 'adjusted to 4x.';
+              } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-BreakfastBaconator.png";
+                adjusted = 'adjusted to 3x.';
+              } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-black-BreakfastBaconator.png";
+                adjusted = 'adjusted to 2x.';
+              } else {
+                // no adjustment required since default is '@1x'
+              }
+
+              if (labAd.deviceSize == 'md') {
+                inAd2.classList.add("md");
+                inAdimg5.classList.add("abs-md");
+                inAdimg4.classList.add("abs-md");
+                inAdimg3.classList.add("abs-md");
+                inAdimg2.classList.add("abs-md");
+                inAdimg1.classList.add("abs-md");
+                inAdimg.classList.add("abs-md");
+              } else if (labAd.deviceSize == 'lg') {
+                inAd2.classList.add("lg");
+                inAdimg5.classList.add("abs-lg");
+                inAdimg4.classList.add("abs-lg");
+                inAdimg3.classList.add("abs-lg");
+                inAdimg2.classList.add("abs-lg");
+                inAdimg1.classList.add("abs-lg");
+                inAdimg.classList.add("abs-lg");
+
+              } else if (labAd.deviceSize == 'xl') {
+                inAd2.classList.add("xl");
+                inAdimg5.classList.add("abs-xl");
+                inAdimg4.classList.add("abs-xl");
+                inAdimg3.classList.add("abs-xl");
+                inAdimg2.classList.add("abs-xl");
+                inAdimg1.classList.add("abs-xl");
+                inAdimg.classList.add("abs-xl");
+              } else {
+
+              }
+            }
+
+            break;
+
+          case 'sun-n':
+          case 'clr-n':
+            selected.scenario = 'Clear Night';
+            selected.bg.fileName = '400x660_WEN_bg-clr-n.jpg';
+            selected.adImages.push( imgObj('cta', '320x180-CTA.png') );
+
+            selected.adImages.push( imgObj('rBtn', '320x180-next-btn.png') );
+            selected.adImages.push( imgObj('lBtn', '320x180-prev-btn.png') );
+
+            if (labAd.deviceSize == 'sm') {
+
+              var inAd1 = document.getElementById('labAdDiv');
+
+              var inAd2 = document.createElement("div");
+              inAd2.id = 'labAdDivIn';
+              inAd2.classList.add("sm");
+              inAd1.appendChild(inAd2);
+
+              var inAd21 = document.getElementById('labAdDivIn');
+
+              var inAdimg5 = document.createElement("img");
+              inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+              inAdimg5.id = 'object6';
+              inAdimg5.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg5);
+
+              var inAdimg4 = document.createElement("img");
+              inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+              inAdimg4.id = 'object5';
+              inAdimg4.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg4);
+
+              var inAdimg3 = document.createElement("img");
+              inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+              inAdimg3.id = 'object4';
+              inAdimg3.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg3);
+
+              var inAdimg2 = document.createElement("img");
+              inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+              inAdimg2.id = 'object3';
+              inAdimg2.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg2);
+
+              var inAdimg1 = document.createElement("img");
+              inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+              inAdimg1.id = 'object2';
+              inAdimg1.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg1);
+
+              var inAdimg = document.createElement("img");
+              inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+              inAdimg.id = 'object1';
+              inAdimg.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg);
+
+              if (labAd.dpr > 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 4x.';
+              } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 3x.';
+              } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 2x.';
+              } else {
+                // no adjustment required since default is '@1x'
+              }
+
+            } else {
+
+              var inAd1 = document.getElementById('labAdDiv');
+
+              var inAd2 = document.createElement("div");
+              inAd2.id = 'labAdDivIn';
+              inAd1.appendChild(inAd2);
+
+              var inAd21 = document.getElementById('labAdDivIn');
+
+              var inAdimg5 = document.createElement("img");
+              inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+              inAdimg5.id = 'object6';
+
+              inAd21.appendChild(inAdimg5);
+
+              var inAdimg4 = document.createElement("img");
+              inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+              inAdimg4.id = 'object5';
+
+              inAd21.appendChild(inAdimg4);
+
+              var inAdimg3 = document.createElement("img");
+              inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+              inAdimg3.id = 'object4';
+
+              inAd21.appendChild(inAdimg3);
+
+              var inAdimg2 = document.createElement("img");
+              inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+              inAdimg2.id = 'object3';
+
+              inAd21.appendChild(inAdimg2);
+
+              var inAdimg1 = document.createElement("img");
+              inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+              inAdimg1.id = 'object2';
+
+              inAd21.appendChild(inAdimg1);
+
+              var inAdimg = document.createElement("img");
+              inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+              inAdimg.id = 'object1';
+
+              inAd21.appendChild(inAdimg);
+
+              if (labAd.dpr > 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 4x.';
+              } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 3x.';
+              } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 2x.';
+              } else {
+                // no adjustment required since default is '@1x'
+              }
+
+              if (labAd.deviceSize == 'md') {
+                inAd2.classList.add("md");
+                inAdimg5.classList.add("abs-md");
+                inAdimg4.classList.add("abs-md");
+                inAdimg3.classList.add("abs-md");
+                inAdimg2.classList.add("abs-md");
+                inAdimg1.classList.add("abs-md");
+                inAdimg.classList.add("abs-md");
+              } else if (labAd.deviceSize == 'lg') {
+                inAd2.classList.add("lg");
+                inAdimg5.classList.add("abs-lg");
+                inAdimg4.classList.add("abs-lg");
+                inAdimg3.classList.add("abs-lg");
+                inAdimg2.classList.add("abs-lg");
+                inAdimg1.classList.add("abs-lg");
+                inAdimg.classList.add("abs-lg");
+
+              } else if (labAd.deviceSize == 'xl') {
+                inAd2.classList.add("xl");
+                inAdimg5.classList.add("abs-xl");
+                inAdimg4.classList.add("abs-xl");
+                inAdimg3.classList.add("abs-xl");
+                inAdimg2.classList.add("abs-xl");
+                inAdimg1.classList.add("abs-xl");
+                inAdimg.classList.add("abs-xl");
+              } else {
+
+              }
+            }
+
+            break;
+          case 'cld-n':
+          case 'pcld-n':
+            selected.scenario = 'Cloudy Night';
+            selected.bg.fileName = '400x660_WEN_bg-cld-n.jpg';
+            selected.adImages.push( imgObj('cta', '320x180-CTA.png') );
+
+            selected.adImages.push( imgObj('rBtn', '320x180-next-btn.png') );
+            selected.adImages.push( imgObj('lBtn', '320x180-prev-btn.png') );
+
+            if (labAd.deviceSize == 'sm') {
+
+              var inAd1 = document.getElementById('labAdDiv');
+
+              var inAd2 = document.createElement("div");
+              inAd2.id = 'labAdDivIn';
+              inAd2.classList.add("sm");
+              inAd1.appendChild(inAd2);
+
+              var inAd21 = document.getElementById('labAdDivIn');
+
+              var inAdimg5 = document.createElement("img");
+              inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+              inAdimg5.id = 'object6';
+              inAdimg5.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg5);
+
+              var inAdimg4 = document.createElement("img");
+              inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+              inAdimg4.id = 'object5';
+              inAdimg4.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg4);
+
+              var inAdimg3 = document.createElement("img");
+              inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+              inAdimg3.id = 'object4';
+              inAdimg3.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg3);
+
+              var inAdimg2 = document.createElement("img");
+              inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+              inAdimg2.id = 'object3';
+              inAdimg2.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg2);
+
+              var inAdimg1 = document.createElement("img");
+              inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+              inAdimg1.id = 'object2';
+              inAdimg1.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg1);
+
+              var inAdimg = document.createElement("img");
+              inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+              inAdimg.id = 'object1';
+              inAdimg.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg);
+
+              if (labAd.dpr > 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 4x.';
+              } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 3x.';
+              } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 2x.';
+              } else {
+                // no adjustment required since default is '@1x'
+              }
+
+            } else {
+
+              var inAd1 = document.getElementById('labAdDiv');
+
+              var inAd2 = document.createElement("div");
+              inAd2.id = 'labAdDivIn';
+              inAd1.appendChild(inAd2);
+
+              var inAd21 = document.getElementById('labAdDivIn');
+
+              var inAdimg5 = document.createElement("img");
+              inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+              inAdimg5.id = 'object6';
+
+              inAd21.appendChild(inAdimg5);
+
+              var inAdimg4 = document.createElement("img");
+              inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+              inAdimg4.id = 'object5';
+
+              inAd21.appendChild(inAdimg4);
+
+              var inAdimg3 = document.createElement("img");
+              inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+              inAdimg3.id = 'object4';
+
+              inAd21.appendChild(inAdimg3);
+
+              var inAdimg2 = document.createElement("img");
+              inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+              inAdimg2.id = 'object3';
+
+              inAd21.appendChild(inAdimg2);
+
+              var inAdimg1 = document.createElement("img");
+              inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+              inAdimg1.id = 'object2';
+
+              inAd21.appendChild(inAdimg1);
+
+              var inAdimg = document.createElement("img");
+              inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+              inAdimg.id = 'object1';
+
+              inAd21.appendChild(inAdimg);
+
+              if (labAd.dpr > 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 4x.';
+              } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 3x.';
+              } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 2x.';
+              } else {
+                // no adjustment required since default is '@1x'
+              }
+
+              if (labAd.deviceSize == 'md') {
+                inAd2.classList.add("md");
+                inAdimg5.classList.add("abs-md");
+                inAdimg4.classList.add("abs-md");
+                inAdimg3.classList.add("abs-md");
+                inAdimg2.classList.add("abs-md");
+                inAdimg1.classList.add("abs-md");
+                inAdimg.classList.add("abs-md");
+              } else if (labAd.deviceSize == 'lg') {
+                inAd2.classList.add("lg");
+                inAdimg5.classList.add("abs-lg");
+                inAdimg4.classList.add("abs-lg");
+                inAdimg3.classList.add("abs-lg");
+                inAdimg2.classList.add("abs-lg");
+                inAdimg1.classList.add("abs-lg");
+                inAdimg.classList.add("abs-lg");
+
+              } else if (labAd.deviceSize == 'xl') {
+                inAd2.classList.add("xl");
+                inAdimg5.classList.add("abs-xl");
+                inAdimg4.classList.add("abs-xl");
+                inAdimg3.classList.add("abs-xl");
+                inAdimg2.classList.add("abs-xl");
+                inAdimg1.classList.add("abs-xl");
+                inAdimg.classList.add("abs-xl");
+              } else {
+
+              }
+            }
+
+            break;
+          case 'rain-d':
+          case 'thdr-d':
+            selected.scenario = 'Rainy Day';
+            selected.bg.fileName = '400x660_WEN_bg-rain-d.jpg';
+            selected.adImages.push( imgObj('cta', '320x180-CTA.png') );
+
+            selected.adImages.push( imgObj('rBtn', '320x180-next-btn.png') );
+            selected.adImages.push( imgObj('lBtn', '320x180-prev-btn.png') );
+
+            if (labAd.deviceSize == 'sm') {
+
+              var inAd1 = document.getElementById('labAdDiv');
+
+              var inAd2 = document.createElement("div");
+              inAd2.id = 'labAdDivIn';
+              inAd2.classList.add("sm");
+              inAd1.appendChild(inAd2);
+
+              var inAd21 = document.getElementById('labAdDivIn');
+
+              var inAdimg5 = document.createElement("img");
+              inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+              inAdimg5.id = 'object6';
+              inAdimg5.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg5);
+
+              var inAdimg4 = document.createElement("img");
+              inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+              inAdimg4.id = 'object5';
+              inAdimg4.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg4);
+
+              var inAdimg3 = document.createElement("img");
+              inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+              inAdimg3.id = 'object4';
+              inAdimg3.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg3);
+
+              var inAdimg2 = document.createElement("img");
+              inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+              inAdimg2.id = 'object3';
+              inAdimg2.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg2);
+
+              var inAdimg1 = document.createElement("img");
+              inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+              inAdimg1.id = 'object2';
+              inAdimg1.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg1);
+
+              var inAdimg = document.createElement("img");
+              inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+              inAdimg.id = 'object1';
+              inAdimg.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg);
+
+              if (labAd.dpr > 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 4x.';
+              } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 3x.';
+              } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 2x.';
+              } else {
+                // no adjustment required since default is '@1x'
+              }
+
+            } else {
+
+              var inAd1 = document.getElementById('labAdDiv');
+
+              var inAd2 = document.createElement("div");
+              inAd2.id = 'labAdDivIn';
+              inAd1.appendChild(inAd2);
+
+              var inAd21 = document.getElementById('labAdDivIn');
+
+              var inAdimg5 = document.createElement("img");
+              inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+              inAdimg5.id = 'object6';
+
+              inAd21.appendChild(inAdimg5);
+
+              var inAdimg4 = document.createElement("img");
+              inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+              inAdimg4.id = 'object5';
+
+              inAd21.appendChild(inAdimg4);
+
+              var inAdimg3 = document.createElement("img");
+              inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+              inAdimg3.id = 'object4';
+
+              inAd21.appendChild(inAdimg3);
+
+              var inAdimg2 = document.createElement("img");
+              inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+              inAdimg2.id = 'object3';
+
+              inAd21.appendChild(inAdimg2);
+
+              var inAdimg1 = document.createElement("img");
+              inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+              inAdimg1.id = 'object2';
+
+              inAd21.appendChild(inAdimg1);
+
+              var inAdimg = document.createElement("img");
+              inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+              inAdimg.id = 'object1';
+
+              inAd21.appendChild(inAdimg);
+
+              if (labAd.dpr > 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 4x.';
+              } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 3x.';
+              } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-ausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 2x.';
+              } else {
+                // no adjustment required since default is '@1x'
+              }
+
+              if (labAd.deviceSize == 'md') {
+                inAd2.classList.add("md");
+                inAdimg5.classList.add("abs-md");
+                inAdimg4.classList.add("abs-md");
+                inAdimg3.classList.add("abs-md");
+                inAdimg2.classList.add("abs-md");
+                inAdimg1.classList.add("abs-md");
+                inAdimg.classList.add("abs-md");
+              } else if (labAd.deviceSize == 'lg') {
+                inAd2.classList.add("lg");
+                inAdimg5.classList.add("abs-lg");
+                inAdimg4.classList.add("abs-lg");
+                inAdimg3.classList.add("abs-lg");
+                inAdimg2.classList.add("abs-lg");
+                inAdimg1.classList.add("abs-lg");
+                inAdimg.classList.add("abs-lg");
+
+              } else if (labAd.deviceSize == 'xl') {
+                inAd2.classList.add("xl");
+                inAdimg5.classList.add("abs-xl");
+                inAdimg4.classList.add("abs-xl");
+                inAdimg3.classList.add("abs-xl");
+                inAdimg2.classList.add("abs-xl");
+                inAdimg1.classList.add("abs-xl");
+                inAdimg.classList.add("abs-xl");
+              } else {
+
+              }
+            }
+            break;
+          case 'rain-n':
+          case 'thdr-n':
+            selected.scenario = 'Rainy Night';
+            selected.bg.fileName = '400x660_WEN_bg-rain-n.jpg';
+            selected.adImages.push( imgObj('cta', '320x180-CTA.png') );
+
+            selected.adImages.push( imgObj('rBtn', '320x180-next-btn.png') );
+            selected.adImages.push( imgObj('lBtn', '320x180-prev-btn.png') );
+
+            if (labAd.deviceSize == 'sm') {
+
+              var inAd1 = document.getElementById('labAdDiv');
+
+              var inAd2 = document.createElement("div");
+              inAd2.id = 'labAdDivIn';
+              inAd2.classList.add("sm");
+              inAd1.appendChild(inAd2);
+
+              var inAd21 = document.getElementById('labAdDivIn');
+
+              var inAdimg5 = document.createElement("img");
+              inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+              inAdimg5.id = 'object6';
+              inAdimg5.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg5);
+
+              var inAdimg4 = document.createElement("img");
+              inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+              inAdimg4.id = 'object5';
+              inAdimg4.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg4);
+
+              var inAdimg3 = document.createElement("img");
+              inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant@1x.png";
+              inAdimg3.id = 'object4';
+              inAdimg3.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg3);
+
+              var inAdimg2 = document.createElement("img");
+              inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+              inAdimg2.id = 'object3';
+              inAdimg2.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg2);
+
+              var inAdimg1 = document.createElement("img");
+              inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+              inAdimg1.id = 'object2';
+              inAdimg1.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg1);
+
+              var inAdimg = document.createElement("img");
+              inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+              inAdimg.id = 'object1';
+              inAdimg.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg);
+
+              if (labAd.dpr > 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 4x.';
+              } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 3x.';
+              } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 2x.';
+              } else {
+                // no adjustment required since default is '@1x'
+              }
+
+            } else {
+
+              var inAd1 = document.getElementById('labAdDiv');
+
+              var inAd2 = document.createElement("div");
+              inAd2.id = 'labAdDivIn';
+              inAd1.appendChild(inAd2);
+
+              var inAd21 = document.getElementById('labAdDivIn');
+
+              var inAdimg5 = document.createElement("img");
+              inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+              inAdimg5.id = 'object6';
+
+              inAd21.appendChild(inAdimg5);
+
+              var inAdimg4 = document.createElement("img");
+              inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+              inAdimg4.id = 'object5';
+
+              inAd21.appendChild(inAdimg4);
+
+              var inAdimg3 = document.createElement("img");
+              inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+              inAdimg3.id = 'object4';
+
+              inAd21.appendChild(inAdimg3);
+
+              var inAdimg2 = document.createElement("img");
+              inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+              inAdimg2.id = 'object3';
+
+              inAd21.appendChild(inAdimg2);
+
+              var inAdimg1 = document.createElement("img");
+              inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+              inAdimg1.id = 'object2';
+
+              inAd21.appendChild(inAdimg1);
+
+              var inAdimg = document.createElement("img");
+              inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+              inAdimg.id = 'object1';
+
+              inAd21.appendChild(inAdimg);
+
+              if (labAd.dpr > 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 4x.';
+              } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 3x.';
+              } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 2x.';
+              } else {
+                // no adjustment required since default is '@1x'
+              }
+
+              if (labAd.deviceSize == 'md') {
+                inAd2.classList.add("md");
+                inAdimg5.classList.add("abs-md");
+                inAdimg4.classList.add("abs-md");
+                inAdimg3.classList.add("abs-md");
+                inAdimg2.classList.add("abs-md");
+                inAdimg1.classList.add("abs-md");
+                inAdimg.classList.add("abs-md");
+              } else if (labAd.deviceSize == 'lg') {
+                inAd2.classList.add("lg");
+                inAdimg5.classList.add("abs-lg");
+                inAdimg4.classList.add("abs-lg");
+                inAdimg3.classList.add("abs-lg");
+                inAdimg2.classList.add("abs-lg");
+                inAdimg1.classList.add("abs-lg");
+                inAdimg.classList.add("abs-lg");
+
+              } else if (labAd.deviceSize == 'xl') {
+                inAd2.classList.add("xl");
+                inAdimg5.classList.add("abs-xl");
+                inAdimg4.classList.add("abs-xl");
+                inAdimg3.classList.add("abs-xl");
+                inAdimg2.classList.add("abs-xl");
+                inAdimg1.classList.add("abs-xl");
+                inAdimg.classList.add("abs-xl");
+              } else {
+
+              }
+            }
+
+            break;
+          case 'snow-d'://Wintery Day
+          case 'ice-d': //Ice Day
+            selected.scenario = 'Wintry/Icy Day';
+            selected.bg.fileName = '400x660_WEN_bg-snow-d.jpg';
+            selected.adImages.push( imgObj('cta', '320x180-CTA.png') );
+
+            selected.adImages.push( imgObj('rBtn', '320x180-next-btn.png') );
+            selected.adImages.push( imgObj('lBtn', '320x180-prev-btn.png') );
+
+            if (labAd.deviceSize == 'sm') {
+
+              var inAd1 = document.getElementById('labAdDiv');
+
+              var inAd2 = document.createElement("div");
+              inAd2.id = 'labAdDivIn';
+              inAd2.classList.add("sm");
+              inAd1.appendChild(inAd2);
+
+              var inAd21 = document.getElementById('labAdDivIn');
+
+              var inAdimg5 = document.createElement("img");
+              inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+              inAdimg5.id = 'object6';
+              inAdimg5.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg5);
+
+              var inAdimg4 = document.createElement("img");
+              inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+              inAdimg4.id = 'object5';
+              inAdimg4.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg4);
+
+              var inAdimg3 = document.createElement("img");
+              inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant@1x.png";
+              inAdimg3.id = 'object4';
+              inAdimg3.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg3);
+
+              var inAdimg2 = document.createElement("img");
+              inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+              inAdimg2.id = 'object3';
+              inAdimg2.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg2);
+
+              var inAdimg1 = document.createElement("img");
+              inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+              inAdimg1.id = 'object2';
+              inAdimg1.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg1);
+
+              var inAdimg = document.createElement("img");
+              inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+              inAdimg.id = 'object1';
+              inAdimg.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg);
+
+              if (labAd.dpr > 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 4x.';
+              } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 3x.';
+              } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 2x.';
+              } else {
+                // no adjustment required since default is '@1x'
+              }
+
+            } else {
+
+              var inAd1 = document.getElementById('labAdDiv');
+
+              var inAd2 = document.createElement("div");
+              inAd2.id = 'labAdDivIn';
+              inAd1.appendChild(inAd2);
+
+              var inAd21 = document.getElementById('labAdDivIn');
+
+              var inAdimg5 = document.createElement("img");
+              inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+              inAdimg5.id = 'object6';
+
+              inAd21.appendChild(inAdimg5);
+
+              var inAdimg4 = document.createElement("img");
+              inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+              inAdimg4.id = 'object5';
+
+              inAd21.appendChild(inAdimg4);
+
+              var inAdimg3 = document.createElement("img");
+              inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+              inAdimg3.id = 'object4';
+
+              inAd21.appendChild(inAdimg3);
+
+              var inAdimg2 = document.createElement("img");
+              inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+              inAdimg2.id = 'object3';
+
+              inAd21.appendChild(inAdimg2);
+
+              var inAdimg1 = document.createElement("img");
+              inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+              inAdimg1.id = 'object2';
+
+              inAd21.appendChild(inAdimg1);
+
+              var inAdimg = document.createElement("img");
+              inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+              inAdimg.id = 'object1';
+
+              inAd21.appendChild(inAdimg);
+
+              if (labAd.dpr > 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 4x.';
+              } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 3x.';
+              } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 2x.';
+              } else {
+                // no adjustment required since default is '@1x'
+              }
+
+              if (labAd.deviceSize == 'md') {
+                inAd2.classList.add("md");
+                inAdimg5.classList.add("abs-md");
+                inAdimg4.classList.add("abs-md");
+                inAdimg3.classList.add("abs-md");
+                inAdimg2.classList.add("abs-md");
+                inAdimg1.classList.add("abs-md");
+                inAdimg.classList.add("abs-md");
+              } else if (labAd.deviceSize == 'lg') {
+                inAd2.classList.add("lg");
+                inAdimg5.classList.add("abs-lg");
+                inAdimg4.classList.add("abs-lg");
+                inAdimg3.classList.add("abs-lg");
+                inAdimg2.classList.add("abs-lg");
+                inAdimg1.classList.add("abs-lg");
+                inAdimg.classList.add("abs-lg");
+
+              } else if (labAd.deviceSize == 'xl') {
+                inAd2.classList.add("xl");
+                inAdimg5.classList.add("abs-xl");
+                inAdimg4.classList.add("abs-xl");
+                inAdimg3.classList.add("abs-xl");
+                inAdimg2.classList.add("abs-xl");
+                inAdimg1.classList.add("abs-xl");
+                inAdimg.classList.add("abs-xl");
+              } else {
+
+              }
+            }
+
+            break;
+          case 'snow-n'://Wintery Night
+          case 'ice-n': //Ice Night
+            selected.scenario = 'Wintry/Icy Night';
+            selected.bg.fileName = '400x660_WEN_bg-snow-n.jpg';
+            selected.adImages.push( imgObj('cta', '320x180-CTA.png') );
+
+            selected.adImages.push( imgObj('rBtn', '320x180-next-btn.png') );
+            selected.adImages.push( imgObj('lBtn', '320x180-prev-btn.png') );
+
+            if (labAd.deviceSize == 'sm') {
+
+              var inAd1 = document.getElementById('labAdDiv');
+
+              var inAd2 = document.createElement("div");
+              inAd2.id = 'labAdDivIn';
+              inAd2.classList.add("sm");
+              inAd1.appendChild(inAd2);
+
+              var inAd21 = document.getElementById('labAdDivIn');
+
+              var inAdimg5 = document.createElement("img");
+              inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+              inAdimg5.id = 'object6';
+              inAdimg5.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg5);
+
+              var inAdimg4 = document.createElement("img");
+              inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+              inAdimg4.id = 'object5';
+              inAdimg4.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg4);
+
+              var inAdimg3 = document.createElement("img");
+              inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+              inAdimg3.id = 'object4';
+              inAdimg3.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg3);
+
+              var inAdimg2 = document.createElement("img");
+              inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+              inAdimg2.id = 'object3';
+              inAdimg2.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg2);
+
+              var inAdimg1 = document.createElement("img");
+              inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+              inAdimg1.id = 'object2';
+              inAdimg1.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg1);
+
+              var inAdimg = document.createElement("img");
+              inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+              inAdimg.id = 'object1';
+              inAdimg.classList.add("abs-sm");
+              inAd21.appendChild(inAdimg);
+
+              if (labAd.dpr > 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 4x.';
+              } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 3x.';
+              } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 2x.';
+              } else {
+                // no adjustment required since default is '@1x'
+              }
+
+            } else {
+
+              var inAd1 = document.getElementById('labAdDiv');
+
+              var inAd2 = document.createElement("div");
+              inAd2.id = 'labAdDivIn';
+              inAd1.appendChild(inAd2);
+
+              var inAd21 = document.getElementById('labAdDivIn');
+
+              var inAdimg5 = document.createElement("img");
+              inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+              inAdimg5.id = 'object6';
+
+              inAd21.appendChild(inAdimg5);
+
+              var inAdimg4 = document.createElement("img");
+              inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+              inAdimg4.id = 'object5';
+
+              inAd21.appendChild(inAdimg4);
+
+              var inAdimg3 = document.createElement("img");
+              inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+              inAdimg3.id = 'object4';
+
+              inAd21.appendChild(inAdimg3);
+
+              var inAdimg2 = document.createElement("img");
+              inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+              inAdimg2.id = 'object3';
+
+              inAd21.appendChild(inAdimg2);
+
+              var inAdimg1 = document.createElement("img");
+              inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+              inAdimg1.id = 'object2';
+
+              inAd21.appendChild(inAdimg1);
+
+              var inAdimg = document.createElement("img");
+              inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+              inAdimg.id = 'object1';
+
+              inAd21.appendChild(inAdimg);
+
+              if (labAd.dpr > 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 4x.';
+              } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 3x.';
+              } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissan.png";
+                inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                adjusted = 'adjusted to 2x.';
+              } else {
+                // no adjustment required since default is '@1x'
+              }
+
+              if (labAd.deviceSize == 'md') {
+                inAd2.classList.add("md");
+                inAdimg5.classList.add("abs-md");
+                inAdimg4.classList.add("abs-md");
+                inAdimg3.classList.add("abs-md");
+                inAdimg2.classList.add("abs-md");
+                inAdimg1.classList.add("abs-md");
+                inAdimg.classList.add("abs-md");
+              } else if (labAd.deviceSize == 'lg') {
+                inAd2.classList.add("lg");
+                inAdimg5.classList.add("abs-lg");
+                inAdimg4.classList.add("abs-lg");
+                inAdimg3.classList.add("abs-lg");
+                inAdimg2.classList.add("abs-lg");
+                inAdimg1.classList.add("abs-lg");
+                inAdimg.classList.add("abs-lg");
+
+              } else if (labAd.deviceSize == 'xl') {
+                inAd2.classList.add("xl");
+                inAdimg5.classList.add("abs-xl");
+                inAdimg4.classList.add("abs-xl");
+                inAdimg3.classList.add("abs-xl");
+                inAdimg2.classList.add("abs-xl");
+                inAdimg1.classList.add("abs-xl");
+                inAdimg.classList.add("abs-xl");
+              } else {
+
+              }
+            }
+
+            break;
+          default:
+
+            //Kylie Prevatt - 03/31/22
+           //Added conditional logic to display correct D/N version of default creative
+
+           if (labAd.macros.dynght == 'n' || labAd.macros.dynght == 'N'){
+             selected.scenario = 'Cloudy Night';
+             selected.bg.fileName = '400x660_WEN_bg-cld-n.jpg';
+             selected.adImages.push( imgObj('cta', '320x180-CTA.png') );
+
+             selected.adImages.push( imgObj('rBtn', '320x180-next-btn.png') );
+             selected.adImages.push( imgObj('lBtn', '320x180-prev-btn.png') );
+
+             if (labAd.deviceSize == 'sm') {
+
+               var inAd1 = document.getElementById('labAdDiv');
+
+               var inAd2 = document.createElement("div");
+               inAd2.id = 'labAdDivIn';
+               inAd2.classList.add("sm");
+               inAd1.appendChild(inAd2);
+
+               var inAd21 = document.getElementById('labAdDivIn');
+
+               var inAdimg5 = document.createElement("img");
+               inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+               inAdimg5.id = 'object6';
+               inAdimg5.classList.add("abs-sm");
+               inAd21.appendChild(inAdimg5);
+
+               var inAdimg4 = document.createElement("img");
+               inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+               inAdimg4.id = 'object5';
+               inAdimg4.classList.add("abs-sm");
+               inAd21.appendChild(inAdimg4);
+
+               var inAdimg3 = document.createElement("img");
+               inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+               inAdimg3.id = 'object4';
+               inAdimg3.classList.add("abs-sm");
+               inAd21.appendChild(inAdimg3);
+
+               var inAdimg2 = document.createElement("img");
+               inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+               inAdimg2.id = 'object3';
+               inAdimg2.classList.add("abs-sm");
+               inAd21.appendChild(inAdimg2);
+
+               var inAdimg1 = document.createElement("img");
+               inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+               inAdimg1.id = 'object2';
+               inAdimg1.classList.add("abs-sm");
+               inAd21.appendChild(inAdimg1);
+
+               var inAdimg = document.createElement("img");
+               inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+               inAdimg.id = 'object1';
+               inAdimg.classList.add("abs-sm");
+               inAd21.appendChild(inAdimg);
+
+               if (labAd.dpr > 3) {
+                 inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                 inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                 inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                 inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                 inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                 inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                 adjusted = 'adjusted to 4x.';
+               } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                 inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                 inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                 inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                 inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                 inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                 inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                 adjusted = 'adjusted to 3x.';
+               } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                 inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                 inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                 inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                 inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                 inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                 inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                 adjusted = 'adjusted to 2x.';
+               } else {
+                 // no adjustment required since default is '@1x'
+               }
+
+             } else {
+
+               var inAd1 = document.getElementById('labAdDiv');
+
+               var inAd2 = document.createElement("div");
+               inAd2.id = 'labAdDivIn';
+               inAd1.appendChild(inAd2);
+
+               var inAd21 = document.getElementById('labAdDivIn');
+
+               var inAdimg5 = document.createElement("img");
+               inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+               inAdimg5.id = 'object6';
+
+               inAd21.appendChild(inAdimg5);
+
+               var inAdimg4 = document.createElement("img");
+               inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+               inAdimg4.id = 'object5';
+
+               inAd21.appendChild(inAdimg4);
+
+               var inAdimg3 = document.createElement("img");
+               inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+               inAdimg3.id = 'object4';
+
+               inAd21.appendChild(inAdimg3);
+
+               var inAdimg2 = document.createElement("img");
+               inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+               inAdimg2.id = 'object3';
+
+               inAd21.appendChild(inAdimg2);
+
+               var inAdimg1 = document.createElement("img");
+               inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+               inAdimg1.id = 'object2';
+
+               inAd21.appendChild(inAdimg1);
+
+               var inAdimg = document.createElement("img");
+               inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+               inAdimg.id = 'object1';
+
+               inAd21.appendChild(inAdimg);
+
+               if (labAd.dpr > 3) {
+                 inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                 inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                 inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                 inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                 inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                 inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                 adjusted = 'adjusted to 4x.';
+               } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                 inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                 inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                 inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                 inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                 inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                 inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                 adjusted = 'adjusted to 3x.';
+               } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                 inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                 inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                 inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                 inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                 inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                 inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                 adjusted = 'adjusted to 2x.';
+               } else {
+                 // no adjustment required since default is '@1x'
+               }
+
+               if (labAd.deviceSize == 'md') {
+                 inAd2.classList.add("md");
+                 inAdimg5.classList.add("abs-md");
+                 inAdimg4.classList.add("abs-md");
+                 inAdimg3.classList.add("abs-md");
+                 inAdimg2.classList.add("abs-md");
+                 inAdimg1.classList.add("abs-md");
+                 inAdimg.classList.add("abs-md");
+               } else if (labAd.deviceSize == 'lg') {
+                 inAd2.classList.add("lg");
+                 inAdimg5.classList.add("abs-lg");
+                 inAdimg4.classList.add("abs-lg");
+                 inAdimg3.classList.add("abs-lg");
+                 inAdimg2.classList.add("abs-lg");
+                 inAdimg1.classList.add("abs-lg");
+                 inAdimg.classList.add("abs-lg");
+
+               } else if (labAd.deviceSize == 'xl') {
+                 inAd2.classList.add("xl");
+                 inAdimg5.classList.add("abs-xl");
+                 inAdimg4.classList.add("abs-xl");
+                 inAdimg3.classList.add("abs-xl");
+                 inAdimg2.classList.add("abs-xl");
+                 inAdimg1.classList.add("abs-xl");
+                 inAdimg.classList.add("abs-xl");
+               } else {
+
+               }
+             }
+           } else {
+             selected.scenario = 'Cloudy Day - default: '+ sCond;
+             selected.bg.fileName = '400x660_WEN_bg-cld-d.jpg';
+             selected.adImages.push( imgObj('cta', '320x180-CTA.png') );
+
+             selected.adImages.push( imgObj('rBtn', '320x180-next-btn.png') );
+             selected.adImages.push( imgObj('lBtn', '320x180-prev-btn.png') );
+
+             if (labAd.deviceSize == 'sm') {
+
+               var inAd1 = document.getElementById('labAdDiv');
+
+               var inAd2 = document.createElement("div");
+               inAd2.id = 'labAdDivIn';
+               inAd2.classList.add("sm");
+               inAd1.appendChild(inAd2);
+
+               var inAd21 = document.getElementById('labAdDivIn');
+
+               var inAdimg5 = document.createElement("img");
+               inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+               inAdimg5.id = 'object6';
+               inAdimg5.classList.add("abs-sm");
+               inAd21.appendChild(inAdimg5);
+
+               var inAdimg4 = document.createElement("img");
+               inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+               inAdimg4.id = 'object5';
+               inAdimg4.classList.add("abs-sm");
+               inAd21.appendChild(inAdimg4);
+
+               var inAdimg3 = document.createElement("img");
+               inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+               inAdimg3.id = 'object4';
+               inAdimg3.classList.add("abs-sm");
+               inAd21.appendChild(inAdimg3);
+
+               var inAdimg2 = document.createElement("img");
+               inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+               inAdimg2.id = 'object3';
+               inAdimg2.classList.add("abs-sm");
+               inAd21.appendChild(inAdimg2);
+
+               var inAdimg1 = document.createElement("img");
+               inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+               inAdimg1.id = 'object2';
+               inAdimg1.classList.add("abs-sm");
+               inAd21.appendChild(inAdimg1);
+
+               var inAdimg = document.createElement("img");
+               inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+               inAdimg.id = 'object1';
+               inAdimg.classList.add("abs-sm");
+               inAd21.appendChild(inAdimg);
+
+               if (labAd.dpr > 3) {
+                 inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                 inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                 inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                 inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                 inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                 inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                 adjusted = 'adjusted to 4x.';
+               } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                 inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                 inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                 inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                 inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                 inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                 inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                 adjusted = 'adjusted to 3x.';
+               } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                 inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-EggandSwissCroissant.png";
+                 inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                 inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-MapleBaconChickenCroissant.png";
+                 inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-Frosty-ccino.png";
+                 inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-HoneyButterChickenBiscuit.png";
+                 inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "320x180-food-white-BreakfastBaconator.png";
+                 adjusted = 'adjusted to 2x.';
+               } else {
+                 // no adjustment required since default is '@1x'
+               }
+
+             } else {
+
+               var inAd1 = document.getElementById('labAdDiv');
+
+               var inAd2 = document.createElement("div");
+               inAd2.id = 'labAdDivIn';
+               inAd1.appendChild(inAd2);
+
+               var inAd21 = document.getElementById('labAdDivIn');
+
+               var inAdimg5 = document.createElement("img");
+               inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+               inAdimg5.id = 'object6';
+
+               inAd21.appendChild(inAdimg5);
+
+               var inAdimg4 = document.createElement("img");
+               inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+               inAdimg4.id = 'object5';
+
+               inAd21.appendChild(inAdimg4);
+
+               var inAdimg3 = document.createElement("img");
+               inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+               inAdimg3.id = 'object4';
+
+               inAd21.appendChild(inAdimg3);
+
+               var inAdimg2 = document.createElement("img");
+               inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+               inAdimg2.id = 'object3';
+
+               inAd21.appendChild(inAdimg2);
+
+               var inAdimg1 = document.createElement("img");
+               inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+               inAdimg1.id = 'object2';
+
+               inAd21.appendChild(inAdimg1);
+
+               var inAdimg = document.createElement("img");
+               inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+               inAdimg.id = 'object1';
+
+               inAd21.appendChild(inAdimg);
+
+               if (labAd.dpr > 3) {
+                 inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                 inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                 inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                 inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                 inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                 inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                 adjusted = 'adjusted to 4x.';
+               } else if (labAd.dpr > 2 && labAd.dpr <= 3) {
+                 inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                 inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                 inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                 inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                 inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                 inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                 adjusted = 'adjusted to 3x.';
+               } else if (labAd.dpr > 1 && labAd.dpr <= 2) {
+                 inAdimg5.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-EggandSwissCroissant.png";
+                 inAdimg4.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Sausage-Egg-CheeseBiscuit.png";
+                 inAdimg3.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-MapleBaconChickenCroissant.png";
+                 inAdimg2.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-Frosty-ccino.png";
+                 inAdimg1.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-HoneyButterChickenBiscuit.png";
+                 inAdimg.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  "360x180-food-white-BreakfastBaconator.png";
+                 adjusted = 'adjusted to 2x.';
+               } else {
+                 // no adjustment required since default is '@1x'
+               }
+
+               if (labAd.deviceSize == 'md') {
+                 inAd2.classList.add("md");
+                 inAdimg5.classList.add("abs-md");
+                 inAdimg4.classList.add("abs-md");
+                 inAdimg3.classList.add("abs-md");
+                 inAdimg2.classList.add("abs-md");
+                 inAdimg1.classList.add("abs-md");
+                 inAdimg.classList.add("abs-md");
+               } else if (labAd.deviceSize == 'lg') {
+                 inAd2.classList.add("lg");
+                 inAdimg5.classList.add("abs-lg");
+                 inAdimg4.classList.add("abs-lg");
+                 inAdimg3.classList.add("abs-lg");
+                 inAdimg2.classList.add("abs-lg");
+                 inAdimg1.classList.add("abs-lg");
+                 inAdimg.classList.add("abs-lg");
+
+               } else if (labAd.deviceSize == 'xl') {
+                 inAd2.classList.add("xl");
+                 inAdimg5.classList.add("abs-xl");
+                 inAdimg4.classList.add("abs-xl");
+                 inAdimg3.classList.add("abs-xl");
+                 inAdimg2.classList.add("abs-xl");
+                 inAdimg1.classList.add("abs-xl");
+                 inAdimg.classList.add("abs-xl");
+               } else {
+
+               }
+             }
+           }
+
+            break;
+        }
+
+        // process selected BG filename dimensions by passing through setSrcSize
+        selected.bg.fileName = setSrcSize(selected.bg.fileName, labAd.product.dimensions.bg[labAd.deviceSize].width);
+
+
+        ////////////////////////////////////////
+        // 3: Apply logical BG img dimensions //
+        ////////////////////////////////////////
+        // if (labAd.deviceSize !== 'sm') {
+        //   selected.bg.logicalWidth = 500;
+        //   selected.bg.logicalHeight = 800;
+        // }
+
+
+        var swipeCar = parent.document.getElementById('swipeCar');
+        var leftBTN = parent.document.getElementById('leftBTN');
+        var rightBTN = parent.document.getElementById('rightBTN');
+
+        if (labAd.deviceSize == 'sm') {
+          swipeCar.classList.add("sm");
+          leftBTN.classList.add("sm");
+          rightBTN.classList.add("sm");
+        } else if (labAd.deviceSize == 'md') {
+          swipeCar.classList.add("md");
+          leftBTN.classList.add("md");
+          rightBTN.classList.add("md");
+        } else if (labAd.deviceSize == 'lg') {
+          swipeCar.classList.add("lg");
+          leftBTN.classList.add("lg");
+          rightBTN.classList.add("lg");
+        } else if (labAd.deviceSize == 'xl') {
+          swipeCar.classList.add("xl");
+          leftBTN.classList.add("xl");
+          rightBTN.classList.add("xl");
+        } else {
+
+        }
+
+        // log results
+        labAd.log({label: 'fileSelection ', detail: selected, type: 'log' });
+
+        ///////////////////////////////////
+        // 4: return object with details //
+        ///////////////////////////////////
+        return selected;
+      } catch (err) {
+        labAd.log({label: 'fileSelection error: ', detail: err, type: 'error', isFatal: true });
+      }
+    }
+
+    var  numberofObject = 6;
+    var  curObject = 1;
+    var  animating = false;
+
+    var activeObject;
+    var prevObject;
+    var nextObject;
+    var isClick = false;
+
+    function eventTypeAndPreventEvent(e) {
+
+          console.log(e);
+          console.log('Event Type: ' + e.type);
+          try {
+            e.stopImmediatePropagation();
+            event.stopImmediatePropagation();
+            e.stopPropagation();
+            event.stopPropagation();
+            e.preventDefault();
+            event.preventDefault();
+          } catch(error) { // for Hammer API
+            event.stopImmediatePropagation();
+            event.stopPropagation();
+            event.preventDefault();
+          }
+    }
+
+    function up(e) {
+      eventTypeAndPreventEvent(e);
+    }
+
+    function down(e) {
+      eventTypeAndPreventEvent(e);
+    }
+
+    function left(e) {
+      eventTypeAndPreventEvent(e);
+      if(!animating){
+        isClick = true;
+        carDirect('Right');
+      }
+    }
+
+    function right(e) {
+      eventTypeAndPreventEvent(e);
+      if(!animating){
+        isClick = true;
+        carDirect('Left');
+      }
+    }
+
+    function carDirect(direction){
+      if(direction == "Right"){
+          curObject--;
+          prevObject = curObject - 1;
+          nextObject = curObject + 1;
+
+          if(curObject == 1){
+              curObject = 1;
+              prevObject = numberofObject;
+              nextObject = curObject + 1;
+
+          }else if(curObject < 1){
+              curObject = numberofObject;
+              prevObject = numberofObject - 1;
+              nextObject = 1;
+          }
+      }else{
+          curObject++;
+          prevObject = curObject - 1;
+          nextObject = curObject + 1;
+
+          if(curObject == numberofObject){
+              curObject = numberofObject;
+              prevObject = numberofObject - 1;
+              nextObject = 1;
+
+          }else if(curObject > numberofObject){
+              curObject = 1;
+              prevObject = numberofObject;
+              nextObject = curObject + 1;
+
+
+          }
+      }
+
+      pO(prevObject,direction);
+      aO(curObject,direction);
+      nO(nextObject,direction);
+      console.log("C:"+curObject);
+
+
+      animating = true;
+      setTimeout(function(){
+          animating = false;
+      },1125)
+
+    }
+
+    function nO(objectCount, dir) {
+      if (labAd.deviceSize == 'sm') {
+        if(dir == 'Right'){
+            document.getElementById('object' + objectCount).style.transform ="translateX(320px)";
+            setTimeout(function(){
+                document.getElementById('object' + objectCount).style.opacity ="0";
+            },750)
+        }else{
+            document.getElementById('object' + objectCount).style.transform ="translateX(320px)";
+            document.getElementById('object' + objectCount).style.opacity ="0";
+        }
+      } else {
+        if(dir == 'Right'){
+            document.getElementById('object' + objectCount).style.transform ="translateX(360px)";
+            setTimeout(function(){
+                document.getElementById('object' + objectCount).style.opacity ="0";
+            },750)
+        }else{
+            document.getElementById('object' + objectCount).style.transform ="translateX(360px)";
+            document.getElementById('object' + objectCount).style.opacity ="0";
+        }
+      }
+    }
+
+
+    function aO(objectCount,dir) {
+          document.getElementById('object' + objectCount).style.opacity ="1";
+          document.getElementById('object' + objectCount).style.transform ="translateX(0px)";
+
+    }
+
+    function pO(objectCount,dir) {
+      if (labAd.deviceSize == 'sm') {
+        if(dir == 'Right'){
+            document.getElementById('object' + objectCount).style.opacity ="0";
+            document.getElementById('object' + objectCount).style.transform ="translateX(-320px)";
+
+        }else{
+            document.getElementById('object' + objectCount).style.transform ="translateX(-320px)";
+            setTimeout(function(){
+                document.getElementById('object' + objectCount).style.opacity ="0";
+            },750)
+
+        }
+      } else {
+        if(dir == 'Right'){
+            document.getElementById('object' + objectCount).style.opacity ="0";
+            document.getElementById('object' + objectCount).style.transform ="translateX(-360px)";
+
+        }else{
+            document.getElementById('object' + objectCount).style.transform ="translateX(-360px)";
+            setTimeout(function(){
+                document.getElementById('object' + objectCount).style.opacity ="0";
+            },750)
+
+        }
+      }
+    }
+
+    function initAnim(){
+        setTimeout(anim,1000);
+    }
+
+    var AutoInterval;
+    function anim(){
+      AutoInterval = setInterval(function(){
+          if(!isClick){
+            if(!animating){
+              carDirect('Left');
+            }
+          }
+      },1000)
+    }
+
+
+    function fireAppEvent(sEventName, oProps) {
+    	try {
+    		logTime('fireAppEvent-' + sEventName);
+    		// stringify oProps object for use in dispatchAppEvent
+    		var payload = JSON.stringify(oProps);
+    		admob.events.dispatchAppEvent(sEventName, payload);
+    		labAd.log({
+    			label: 'fireAppEvent ' + sEventName,
+    			detail: oProps,
+    			type: 'log'
+    		});
+    	} catch (err) {
+    		labAd.log({
+    			label: 'fireAppEvent error: ' + sEventName,
+    			detail: err,
+    			type: 'error',
+    			isFatal: false
+    		});
+    	}
+    }
+
+    function getImpPixel(sURL, sEventName) {
+    	try {
+    		var regexp = /(https?:\/\/[^\s]+)/g; // begins with http:// or https://
+    		if(regexp.exec(sURL)) {
+    			// if url is valid, add tracking pixel to labTracking
+    			var pixel = document.createElement('img');
+    			pixel.src = sURL;
+    			pixel.alt = sEventName;
+    			// log success
+    			labAd.log({
+    				label: 'getImpPixel: ' + sEventName,
+    				detail: pixel,
+    				type: 'log'
+    			});
+    		} else {
+    			// log error for invalid URL.
+    			var eO = {
+    				message: 'sEventName: ' + sEventName
+    			};
+    			labAd.log({
+    				label: 'getImpPixel - invalid URL: ' + sURL,
+    				detail: eO,
+    				type: 'error',
+    				isFatal: false
+    			});
+    		}
+    	} catch (err) {
+    		labAd.log({
+    			label: 'getImpPixel error: ',
+    			detail: err,
+    			type: 'error',
+    			isFatal: false
+    		});
+    	}
+    }
+
+    function getAdMode() {
+      try {
+        labAd.test.HashParts = getTestHash();
+        // if the zero index === adstest, we go into test mode
+        if (labAd.test.HashParts[0] === "adstest") {
+            labAd.test.mode = 'preview';
+        } else if (labAd.macros.gamPreview === 'true') { // Macro will return true for GAM Creative Preview. Original macro token will be intact during local dev.
+            labAd.test.mode = 'gamPreview';
+        } else {
+            labAd.test.mode = 'live';
+        }
+
+        labAd.log({label: 'getAdMode: ' + labAd.test.mode, detail: labAd.test, type: 'log' });
+        return labAd.test.mode;
+      } catch (err) {
+        labAd.log({label: 'getAdMode error: ', detail: err, type: 'error', isFatal: true });
+      }
+    }
+
+
+    function getData(sMode) {
+      try {
+        logTime('getData');
+        // Cases below define steps to get labAd.vars data - based on mode.
+        switch(sMode) {
+          case 'preview':
+          case 'gamPreview':
+            // clear GAM click macro so clicks will work in test modes
+            labAd.macros.gamClick = "";
+            // create labAd.preview.vars data set to capture current url params/values
+            labAd.preview.vars = getUrlParams();
+            labAd.log({label: 'loadAdImages ', detail: imgBatch, type: 'log' });
+            // set labAd.vars
+            labAd.vars = setVarsFromUrlParams(labAd.preview.vars);
+            labAd.log({label: 'loadAdImages ', detail: imgBatch, type: 'log' });
+            break;
+          case 'local live':
+            // set labAd.macros using values.js
+            labAd.macros = previewData.setMacros();
+            // set labAd.vars using macro value or default
+            labAd.vars = setVarsFromMacros();
+            labAd.log({ "label": 'setVarsFromMacros: '+ sMode, "callee": arguments.callee.name, "detail": labAd.vars, "type": 'log' });
+            // set url params but do NOT reload page
+            setUrlParams(false);
+            break;
+          default:
+            // set labAd.vars using macro value or default
+            labAd.vars = setVarsFromMacros();
+            labAd.log({ "label": 'setVarsFromMacros: '+ sMode, "callee": arguments.callee.name, "detail": labAd.vars, "type": 'log' });
+            break;
+        }
+        // POST VAR updates: make any necessary adjustments/assignments now
+        // that labAd.vars have been set/updated. This is the place to sync
+        // vars with labAd props or to set values that combine multiple vars.
+        labAd.adCond = labAd.vars.cnd.value + '-' + labAd.vars.dynght.value;
+        labAd.deviceSize = getDeviceSize(labAd.vars.width.value);
+        labAd.dpr = labAd.vars.dpr.value;
+        // process tempC here to ensure it only happens once per impression
+        if(labAd.vars.tempC.from !== 'urlSearch' && labAd.vars.tempC.from !== 'getTemp') {
+          labAd.vars.tempC = getTemp(labAd.vars.tempC);
+        }
+        // compare deviceSize & dpr values to actual pre-selection values
+        if(labAd.deviceSize !== labAd.vars.deviceSize.value) {
+           labAd.log({ "label": "deviceSize mismatch", "callee": arguments.callee.name, "detail":{"labAd.deviceSize":labAd.deviceSize, "labAd.vars.deviceSize.value":labAd.vars.deviceSize.value}, "type":"log" });
+        }
+        if(labAd.dpr !== labAd.vars.dpr.value) {
+          labAd.log({ "label": "dpr mismatch", "callee": arguments.callee.name, "detail":[labAd.dpr, labAd.vars.dpr.value], "type":"log" });
+        }
+      } catch (err) {
+          labAd.log({"callee": arguments.callee.name, label: 'getData error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function getScreenResolution() {
+    	var screen = {};
+    	screen.dpr = window.devicePixelRatio;
+    	screen.width = window.screen.width;
+    	screen.height = window.screen.height;
+    	screen.resolution = screen.width * screen.dpr + "x" + screen.height * screen.dpr;
+    	return screen;
+    }
+
+    function getTestHash(){
+      try {
+        // expected format & order #adstest + cnd + dynght + deviceSize + dpr
+        labAd.test.hashStr = top.window.location.hash.substring(1);
+        // if this is a local file or gamPreview ith no adstest hash, assign default
+        // hashStr value to eliminate need to manually add it to url
+        if ((top.window.location.protocol === 'file:' || labAd.macros.gamPreview === 'true') && labAd.test.hashStr.indexOf('adstest') == -1) {
+          // get actual deviceSize based on macro value to use as defualt
+          labAd.deviceSize = getDeviceSize();
+          // build array of default values mapped to labAd props so changes are automatically picked up here
+          labAd.test.defaultHashParts = ['adstest', labAd.default.cnd, labAd.default.dynght, labAd.deviceSize, labAd.dpr, labAd.default.previewMode,];
+          // set the missing hash by joining parts of this array to assemble default adstest hash string
+          top.window.location.hash = labAd.test.defaultHashParts.join('+');
+          // now get and use the hashtring
+          labAd.test.hashStr = top.window.location.hash.substring(1);
+          labAd.log({label: 'getTestHash defaultHashParts', detail: labAd.test.defaultHashParts, type: 'log' });
+        }
+        // split hash string on '+' delimiter
+        labAd.test.hashArray = labAd.test.hashStr.split("+");
+        // validate by filtering out empty values: "", undefined
+        labAd.test.hashArrayFiltered = labAd.test.hashArray.filter(function (el) {
+          return el != null && el != "";
+        });
+
+        labAd.log({label: 'getTestHash ', detail: labAd.test.hashArrayFiltered, type: 'log' });
+        // return validated and sanitized array of #adstest hash values
+        return labAd.test.hashArrayFiltered;
+      } catch (err) {
+        labAd.log({label: 'getTestHash error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function imgBatchLoad(imgBatch) {
+    	try {
+    		// store latest batch in labAd.imgs and add additional loader properties
+    		labAd.imgs[imgBatch.name] = {
+    			cb: imgBatch.cbSuccess,
+    			cbFail: imgBatch.cbFail,
+    			cbFailFired: false, // flag to ensure callback only fires once if multiple failures in batch
+    			loadCount: 0,
+    			loadTimer: 0,
+    			loadTimeMax: imgBatch.maxLoadTime,
+    			loaded: [],
+    			toLoad: imgBatch.imgs
+    		};
+    		// start timer for max allowed time for ALL images in batch to load
+    		labAd.imgs[imgBatch.name].loadTimer = setTimeout(function() {
+    			var eO = {
+    				message: labAd.imgs[imgBatch.name].loadTimeMax + 'ms max load time exceeded.'
+    			};
+    			labAd.log({
+    				label: 'imgBatchLoad timeout: ' + imgBatch.name + ' - ',
+    				detail: eO,
+    				type: 'error',
+    				isFatal: false
+    			});
+    			// set reason and show static default
+    			labAd.default.reason = 'imgBatchLoad - ' + imgBatch.name + '- max load time exceeded';
+    			if(!labAd.imgs[imgBatch.name].cbFailFired) {
+    				labAd.imgs[imgBatch.name].cbFailFired = true; // set flag so cbFail can only fire once per batch
+    				labAd.imgs[imgBatch.name].cbFail(labAd.default.reason); // execute failure callback
+    			}
+    		}, labAd.imgs[imgBatch.name].loadTimeMax);
+    		// load each img with load and error handlers
+    		for(var i = 0; i < imgBatch.imgs.length; i++) {
+    			var imgObj = new Image();
+    			imgObj.id = imgBatch.imgs[i].id; // apply id assigned by imgObj step. This used for JS/CSS hook when img added to DOM in showAd.
+    			if(imgBatch.imgs[i].src.indexOf("://") == -1) { // prepend dir when its only the img name
+    				imgObj.src = labAd.dir + labAd.dirClient + labAd.dirFolder +  imgBatch.imgs[i].src;
+    			} else { // use full path
+    				imgObj.src = imgBatch.imgs[i].src;
+    			}
+    			imgObj.onload = function() {
+    				labAd.imgs[imgBatch.name].loadCount++;
+    				labAd.imgs[imgBatch.name].loaded.push(this);
+    				if(labAd.imgs[imgBatch.name].loadCount === labAd.imgs[imgBatch.name].toLoad.length) { // if all imgs loaded
+    					clearInterval(labAd.imgs[imgBatch.name].loadTimer);
+    					labAd.log({
+    						label: 'imgBatchLoad complete: ' + imgBatch.name,
+    						detail: labAd.imgs[imgBatch.name],
+    						type: 'log'
+    					});
+    					// check flag to make sure showDefault hasnt already been called
+    					labAd.imgs[imgBatch.name].cb(labAd.imgs[imgBatch.name].loaded); // execute callback function - pass array of loaded images
+    				}
+    			};
+    			imgObj.onerror = function(err) {
+    				clearInterval(labAd.imgs[imgBatch.name].loadTimer);
+    				labAd.log({
+    					label: 'imgBatchLoad - ' + imgBatch.name + ' - error: ' + err.target.src,
+    					detail: err,
+    					type: 'error',
+    					isFatal: false
+    				});
+    				// set reason and show static default
+    				labAd.default.reason = 'imgBatchLoad - ' + imgBatch.name + ' - error: ' + err.target.src;
+    				if(!labAd.imgs[imgBatch.name].cbFailFired) {
+    					labAd.imgs[imgBatch.name].cbFailFired = true; // set flag so cbFail can only fire once
+    					labAd.imgs[imgBatch.name].cbFail(labAd.default.reason); // execute failure callback
+    				}
+    			};
+    		}
+    	} catch (err) {
+    		labAd.log({
+    			label: 'imgBatchLoad error on batch: ' + imgBatch.name + ' - ',
+    			detail: err,
+    			type: 'error',
+    			isFatal: true
+    		});
+    	}
+    }
+
+    function imgObj(sId, sSrc, nWidth) {
+    	try {
+    		// adjust dpr as needed
+    		var obj = {
+    			id: sId,
+    			src: sSrc,
+    			width: nWidth
+    		};
+    		// adjust image size of src
+    		obj.src = setSrcSize(obj.src, obj.width);
+    		// prepend labAd.dir if src is not absolute path
+    		if(obj.src.indexOf('://') == -1) {
+    			obj.src = labAd.dir + labAd.dirClient + labAd.dirFolder + obj.src;
+    		}
+    		// log results
+    		labAd.log({
+    			label: 'imgObj ' + sId + ' - ' + sSrc,
+    			detail: obj,
+    			type: 'log'
+    		});
+    		return obj;
+    	} catch (err) {
+    		labAd.log({
+    			label: 'imgObj error: ',
+    			detail: err,
+    			type: 'error',
+    			isFatal: true
+    		});
+    	}
+    }
+
+    function loadAdImages(sBatchName, aImages, nMaxLoadTime) {
+      try {
+        // make sure there's at least one image object to load
+        if(aImages.length >= 1) {
+          // create batch loading object defining what to load, now long to wait and what to do on success/failure.
+          var imgBatch = {
+            name: sBatchName, // label this batch of imgs. Use camelCase. Avoid dashes, dots, etc.
+            imgs: aImages, // array of img names
+            maxLoadTime: nMaxLoadTime, // how long to wait for everything to load
+            cbSuccess: showAd, // callback function to execute once everything loads
+            //        cbSuccess: function(){ setTimeout(showAd, 750); },        // callback function to execute once everything loads
+            cbFail: showDefault // callback function to execute on timeout or error
+          };
+          // start loading the batch
+          imgBatchLoad(imgBatch);
+          labAd.log({label: 'loadAdImages ', detail: imgBatch, type: 'log' });
+        } else {
+          alert('Integrated Marquee Ads must have at least 1 image in the AD Area.\n\nMake sure aImages array (2nd argument) has at least 1 entry.\n\nUse transparent .png if all content is in the BG file.');
+          labAd.log({label: 'loadAdImages ', detail: imgBatch, type: 'log' });
+        }
+      } catch (err) {
+        labAd.log({label: 'loadAdImages ', detail: imgBatch, type: 'log' });
+      }
+    }
+
+    function logInfo(oInfo){
+      // save to logs array - regardless of type or details
+      this.logs.push(oInfo);
+
+      // console output format will correspond to type of info being logged.
+      // only local files are eligible for console output.
+
+      // steps for error logs
+      if (oInfo.type === 'error') {
+        // save to errors array
+        this.errors.push(oInfo);
+        // always output log errors so they cannot be suppressed/missed due to logLevel
+        console[oInfo.type](oInfo);
+
+        // if the error is fatal, call showDefault with label passed as reason
+        if (oInfo.isFatal) {
+          showDefault(oInfo.label);
+        }
+      }else{ // steps for non-error logs
+
+        // console output is only possible if file is local
+        if (window.location.href.indexOf("file://") != -1) {
+          // adjust type/level of output based on labAd.logLevel
+          switch (labAd.logLevel) {
+            case 2:
+              // output every individual log
+              console[oInfo.type](oInfo);
+              break;
+            case 0:
+              // output nothing to console
+              break;
+            default:
+              // clear console since this can fire many times but we only need 1 output for this setting
+              console.clear();
+
+              // if there are errors, output them before labAd
+              if (labAd.errors.length > 0) {
+                labAd.errors.forEach(function(err, i){
+                  console.error(err);
+                })
+              }
+
+              // output labAd object for easy inspection
+              console.log(labAd);
+          }
+        };
+      }
+
+      // update labInfo. Example: statefarm-4693437107-1528401281492
+      setLabInfo(this.meta.advertiser + '-' + this.meta.placement + '-' + this.meta.width + 'x' + this.meta.height + '-' + this.time.date, this);
+    }
+
+    function logTime(sName){
+        try {
+          // log timing of key events to time.log for tracking purposes
+          // also return getTime() value so this can be used to get timestamps
+          var d = new Date();
+          var order = Object.keys(labAd.time.log).length;
+          // create new log obj
+          labAd.time.log[sName] = {};
+          // stamp this event
+          labAd.time.log[sName].stamp = d.getTime();
+          // calc split in ms from previous stamp
+          if (sName != 'initAd') {
+            labAd.time.log[sName].split = (labAd.time.log[sName].stamp - labAd.time.stamp);
+          } else {
+            labAd.time.log[sName].split = 0;
+          }
+          // calc elapsed from initAd - in ms
+          labAd.time.log[sName].elapsed = (labAd.time.log[sName].stamp - labAd.time.log['initAd'].stamp);
+          // capture log order to indicate where in sequence this log occured
+          labAd.time.log[sName].order = order;
+
+          // capture timestamp to use for next split
+          labAd.time.stamp = d.getTime();
+
+          return labAd.time.stamp;
+        } catch (err) {
+          labAd.log({label: 'logTime error: ', detail: err, type: 'error', isFatal: false });
+        }
+    }
+
+
+
+    function setLabInfo(sName, obj) {
+      try {
+        // store passed object to labInfo on parent DOM if possible
+        if (labAd.macros.gamPreview === 'true') {
+          // skip logging if running in DFP Preview
+          return;
+        } else {
+          parent.labInfo = parent.labInfo || {};
+          parent.labInfo[sName] = obj;
+        }
+      } catch (err) {
+        labAd.log({label: 'setLabInfo error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    function setSrcSize(sFilename, nWidth) {
+    	try {
+    		// perform string replacement to adjust from sm to lg image
+    		var imgName = decodeURIComponent(sFilename);
+    		var adjusted = 'not adjusted.';
+    		var fastlyParams = '?width=' + nWidth + "&dpr=" + labAd.dpr;
+    		if(labAd.deviceSize != 'sm') {
+    			// Adjust to larger dimensions for non-small devices
+    			if(imgName.indexOf('320x180') != -1) {
+    				imgName = imgName.replace('320x180', '360x180');
+    				adjusted = "adjusted to 360x180."
+    			}
+    			if(imgName.indexOf('400x660') != -1) {
+    				imgName = imgName.replace('400x660', '500x800');
+    				adjusted = "adjusted to 500x800."
+    			}
+    		} else {
+    			adjusted = 'Milli device so no adjustment needed.'
+    		}
+    		// add fastly params to filename
+    		imgName += fastlyParams;
+    		// log success
+    		labAd.log({
+    			label: 'setSrcSize: ' + adjusted,
+    			detail: imgName,
+    			type: 'log'
+    		});
+    		return imgName;
+    	} catch (err) {
+    		labAd.log({
+    			label: 'setSrcSize error: ',
+    			detail: err,
+    			type: 'error',
+    			isFatal: false
+    		});
+    	}
+    }
+
+
+    function showAd(aLoadedImages) {
+      try {
+        if (!labAd.displayed) {
+          // flag to prevent ad from displaying multiple times in the event of failure or timeout
+          labAd.displayed = true;
+
+          logTime('showAd');
+          labAd.log({label: 'showAd: ', detail: aLoadedImages, type: 'log' });
+
+          ////////////////////////////////////////////////
+          // 1: Append AD Area (360x105 or 360x140) images to labAdDiv. //
+          ////////////////////////////////////////////////
+          aLoadedImages.forEach(function(elem) {// for each aLoadedImages el: assign CSS and behavior(s) then attach to DOM
+            // add el reference to labAd.els
+            labAd.els[elem.id] = elem;
+            // assign common class to all
+            labAd.els[elem.id].className = 'abs-' + labAd.deviceSize;
+            labAd.els.labAdDiv.className = labAd.deviceSize;
+            // append to labAdDiv
+            labAd.els.labAdDiv.appendChild(labAd.els[elem.id]);
+            // assign specific behavior/format by id
+            if (elem.id === 'btnInv') { // assign click handler to invisible btn
+              labAd.els[elem.id].onclick = exitClick;
+            }
+          });
+
+          var arrowLeft = parent.document.getElementById('leftBTN');
+          var arrowRight = parent.document.getElementById('rightBTN');
+          var swipeCar = parent.document.getElementById('swipeCar')
+          var labAdDivIn = parent.document.getElementById('labAdDivIn')
+
+
+
+          if(labAd.isMobile) {
+            if (labAd.deviceSize !== "sm") {
+
+                arrowLeft.style.top = "56px";
+                arrowLeft.style.left = "23px";
+                arrowRight.style.top = "56px";
+                arrowRight.style.right = "24px";
+                labAdDivIn.style.top = "0px";
+                swipeCar.style.top = "0px";
+                labAdDivIn.style.left = "0px";
+                swipeCar.style.left = "0px";
+
+
+            } else {
+
+                labAdDivIn.style.width = "320px";
+                labAdDivIn.style.top = "0px";
+                swipeCar.style.top = "0px";
+                labAdDivIn.style.left = "0px";
+                swipeCar.style.left = "0px";
+                arrowLeft.style.top = "56px";
+                arrowLeft.style.left = "21px";
+                arrowRight.style.top = "56px";
+                arrowRight.style.right = "22px";
+            }
+
+          } else {
+              if (labAd.deviceSize !== "sm") {
+
+                labAdDivIn.style.top = "10px";
+                labAdDivIn.style.left = "-18px";
+                swipeCar.style.top = "10px";
+                swipeCar.style.left = "-18px";
+              } else {
+                labAdDivIn.style.width = "310px";
+                labAdDivIn.style.top = "23px";
+                labAdDivIn.style.left = "-3px";
+                swipeCar.style.top = "23px";
+                swipeCar.style.left = "-3px";
+              }
+          }
+
+          swipeCar.addEventListener('click', exitClick);
+
+          arrowLeft.onclick = function(){
+            if(!animating){
+              isClick = true;
+              carDirect('Right');
+            }
+          }
+
+          arrowRight.onclick = function(){
+            if(!animating){
+              isClick = true;
+              carDirect('Left');
+            }
+          }
+
+
+
+          hammerTime_labAd.on('swipedown', up);
+          hammerTime_labAd.on('swipeup', down);
+
+          hammerTime_labAd.on('swipeleft', right);
+          hammerTime_labAd.on('swiperight', left);
+
+          setTimeout(initAnim,1000);
+
+        } else {
+          var err = {message:'showAd called again.'}
+          labAd.log({label: 'Display routine called after labAd.displayed === true.', detail: err, type: 'error', isFatal: false });
+        }
+       }
+      catch (err) {
+        labAd.log({label: 'showAd error: ', detail: err, type: 'error', isFatal: true });
+      }
+    }
+
+    function showBg(bgProps){
+      try {
+        logTime('showBg');
+
+        ///////////////////////////////////////////////////////////////////
+        // 1: Process BG properties and fireAppEvent based on event name //
+        ///////////////////////////////////////////////////////////////////
+        if (bgProps.eventName === 'adBg') {
+          // Static Image BG - assign props from selected
+          labAd.appBg.baseURL = labAd.dir;
+          // assign selected BG filename & adjust DPR if needed
+          labAd.appBg.imgID = labAd.dirClient + labAd.dirFolder + bgProps.fileName;
+          // encode BG image name to prevent '@' from breaking app event.
+        //  labAd.appBg.imgID = encodeURIComponent(labAd.appBg.imgID);
+          // set the logical dimensions
+          labAd.appBg.widthDP = labAd.product.dimensions.bg[labAd.deviceSize].width;
+          labAd.appBg.heightDP = labAd.product.dimensions.bg[labAd.deviceSize].height;
+           // fire the app event passing updated props
+          fireAppEvent('adBg', labAd.appBg);
+
+        } else { // Video BG
+          // Assign bgProps.fileName overwrite to @2x video bg every time.
+          labAd.appBgVid.vidURL = bgProps.fileName.replace('@1x','@2x');
+          // encode vidURL - because '@' is not compatible with BG app events
+          labAd.appBgVid.vidURL = encodeURIComponent(labAd.appBgVid.vidURL);
+          // prepend labAd.dir to filename to form vidURL
+          labAd.appBgVid.vidURL = labAd.dir + labAd.dirClient + labAd.dirFolder +  labAd.appBgVid.vidURL;
+          // set the logical dimensions
+          labAd.appBgVid.widthDP = labAd.product.dimensions.bg[labAd.deviceSize].width;
+    			labAd.appBgVid.heightDP = labAd.product.dimensions.bg[labAd.deviceSize].height;
+          // Set the loopCount property
+          labAd.appBgVid.loop = bgProps.loopCount;
+           // fire the app event passing updated props
+          fireAppEvent('adBgVid', labAd.appBgVid);
+
+        }
+        labAd.log({label: 'showBg ', detail: bgProps, type: 'log' });
+    	} catch (err) {
+    		 labAd.log({label: 'showBg error: ', detail: err, type: 'error', isFatal: false });
+    	}
+    }
+
+    function showDefault(sReason) {
+      try {
+        if (!labAd.displayed) {
+          // flag to prevent ad from displaying multiple times in the event of failure or timeout
+          labAd.displayed = true;
+
+          logTime('showDefault');
+          labAd.default.reason = sReason;
+          labAd.log({label: 'showDefault: ', detail: labAd.default.reason, type: 'log' });
+
+          if (labAd.mode === 'live') {
+            // // TODO: possibly send this error info to Mixpanel for live IMs
+
+          } else {
+            // create error & reason output display for PreviewMode
+            labAd.els.errOutput = document.createElement('div');
+            labAd.els.errOutput.id = 'previewErrorOutput';
+            // create and apppend heading
+            labAd.els.errReason = document.createElement('h1');
+            var t = document.createTextNode(sReason);
+            labAd.els.errReason.appendChild(t);
+            labAd.els.errOutput.appendChild(labAd.els.errReason);
+            // create list
+            labAd.els.errList = document.createElement('ol');
+            // iterate errors and add list item for each
+            labAd.errors.forEach(function(err, i){
+              // create an li & text node for every error
+              var li = document.createElement('li');
+              var lit = document.createTextNode(err.label);
+              li.appendChild(lit);
+              // add li to the ul
+              labAd.els.errList.appendChild(li);
+            });
+
+            // add ul with all list items to output panel
+            labAd.els.errOutput.appendChild(labAd.els.errList);
+            // create footer text
+            var p = document.createElement('footer');
+            p.innerHTML = '<strong>Note:</strong> The list above represents the earliest occuring errors - which should be diagnosed first. <p>Check <code>labAd.errors</code> for a complete set of errors and details.</p>';
+            labAd.els.errOutput.appendChild(p);
+            // empty previewMain and append the errOutput there because GAM Preview
+            // will not permit insertBefore to place the errOutput before other
+            // els in the DOM.
+            labAd.els.previewMain.innerHTML = '';
+            labAd.els.previewMain.appendChild(labAd.els.errOutput);
+            labAd.els.previewMain.style.opacity = 1;
+          }
+
+        } else {
+          var err = {message:'showDefault called again.'}
+          labAd.log({label: 'Display routine called after labAd.displayed === true.', detail: err, type: 'error', isFatal: false });
+        }
+
+      } catch (err) {
+        // not fatal since there's no fallback for this failure.
+        labAd.log({label: 'showDefault error: ', detail: err, type: 'error', isFatal: false });
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', initAd, false);
+    </script>
+    <style>
+        /* CORE CSS - DO NOT EDIT  */
+        /* VIEWABILITY FIX ADDED 11/18/19 - DO NOT REMOVE  */
+        html {height: 100%; width: 100%;}
+        body {margin: 0; height: 100%; width: 100%;}
+
+        #labAdDiv {
+          height: 180px;
+          position: relative;
+          margin: 0 auto;
+      }
+
+      #labAdDiv.sm {width: 320px; }
+      #labAdDiv.md, #labAdDiv.lg, #labAdDiv.xl {width: 360px;}
+
+
+
+    /* Ad Slot Size & Position */
+    .abs-sm {width: 320px; height: 180px; position: absolute; }
+    .abs-md, .abs-lg, .abs-xl {width: 360px; height: 180px; position: absolute;}
+
+
+    .preview #labAdDiv.sm {width: 300px; bottom: 240%;}
+    .preview #labAdDiv.md, .preview #labAdDiv.lg, .preview #labAdDiv.xl {width: 360px; left: 5%; bottom: 230%;}
+
+
+      /* Ad Slot Size & Position */
+      .preview .abs-sm { left: -8px; top: 23px;}
+      .preview .abs-md { left: -18px; top: 190px;}
+      .preview .abs-lg { left: -18px; top: -15px;}
+      .preview .abs-xl { left: -18px; top: 50px;}
+
+
+      /* Foreground element Size */
+      .preview #fgGrid.abs-sm { width: 320px; height: 180px;}
+      .preview #fgGrid.abs-md, .preview #fgGrid.abs-lg, .preview #fgGrid.abs-xl { width: 360px; height: 180px;}
+
+
+            /* Foreground element Position */
+            .preview #fgGrid.abs-md {top: 190px; left: -16px;}
+            .preview #fgGrid.abs-lg {top: -15px;}
+            .preview #fgGrid.abs-xl {top: 49px;}
+
+
+        #btnInv {
+          z-index: 10;
+          cursor: pointer;
+          /*background: rgba(255,255,255, .50);*/
+        }
+
+        .hidden{opacity: 0;}
+      /* END: CORE CSS - DO NOT EDIT  */
+
+      /* Preview Mode CSS - DO NOT EDIT – VIEWABILITY FIX ADDED 11/18/19 */
+          #previewMainContainer{opacity: 0; display: none;}
+          #previewAltContainer{display: none;}
+      /* END: Preview Mode CSS - DO NOT EDIT */
+
+      /*#logo.abs-md,
+      #logo.abs-lg,
+      #logo.abs-xl {
+        top: 5px !important;
+        left: -16px !important;
+      }*/
+
+      #object1.abs-sm {
+        transition: transform .8s ease-in-out, opacity 0.5s ease-in-out;
+        transform: translateX(0px);
+        opacity: 1;
+        /* top: 0px !important; */
+        left: -9999px !important;
+        right: -9999px !important;
+        margin: 0 auto;
+      }
+
+      #object2.abs-sm,
+      #object3.abs-sm,
+      #object4.abs-sm,
+      #object5.abs-sm
+       {
+        transition: transform .8s ease-in-out, opacity 0.5s ease-in-out;
+        transform: translateX(320px);
+        opacity: 0;
+        /* top: 0px !important; */
+        left: -9999px !important;
+        right: -9999px !important;
+        margin: 0 auto;
+      }
+
+      #object6.abs-sm
+       {
+        transition: transform .8s ease-in-out, opacity 0.5s ease-in-out;
+        transform: translateX(-320px);
+        opacity: 0;
+        top: 25px !important;
+        left: -9999px !important;
+        right: -9999px !important;
+        margin: 0 auto;
+      }
+
+      #object1.abs-md,#object1.abs-lg,#object1.abs-xl {
+        transition: transform .8s ease-in-out, opacity 0.5s ease-in-out;
+        transform: translateX(0px);
+        opacity: 1;
+        top: 0px !important;
+        left: -9999px !important;
+        right: -9999px !important;
+        margin: 0 auto;
+      }
+
+      #object2.abs-md,#object2.abs-lg,#object2.abs-xl,
+      #object3.abs-md,#object3.abs-lg,#object3.abs-xl,
+      #object4.abs-md,#object4.abs-lg,#object4.abs-xl,
+      #object5.abs-md,#object5.abs-lg,#object5.abs-xl
+       {
+        transition: transform .8s ease-in-out, opacity 0.5s ease-in-out;
+        transform: translateX(360px);
+        opacity: 0;
+        top: 0px !important;
+        left: -9999px !important;
+        right: -9999px !important;
+        margin: 0 auto;
+      }
+
+      #object6.abs-md,#object6.abs-lg,#object6.abs-xl
+       {
+        transition: transform .8s ease-in-out, opacity 0.5s ease-in-out;
+        transform: translateX(-360px);
+        opacity: 0;
+        top: -3px !important;
+        left: -9999px !important;
+        right: -9999px !important;
+        margin: 0 auto;
+      }
+
+
+      #labAdDivIn {
+        height: 180px;
+        position: absolute;
+        margin: 0 auto;
+        /* top: 33px; */
+        overflow: hidden;
+      }
+
+      #labAdDivIn.sm {
+        height: 180px;
+        position: absolute;
+        top: 0px !important;
+        left: -10px !important;
+        margin: 0 auto;
+        overflow: hidden;
+      }
+
+      #labAdDivIn.md{
+        width: 360px;
+        height: 180px;
+        top: 200px !important;
+        left: -18px !important;
+        position: absolute;
+        margin: 0 auto;
+
+        overflow: hidden;
+      }
+
+      #labAdDivIn.lg {
+        width: 360px;
+        height: 180px;
+        top: 0px !important;
+        left: -10px !important;
+        position: absolute;
+        margin: 0 auto;
+
+        overflow: hidden;
+      }
+
+      #labAdDivIn.xl {
+        width: 360px;
+        height: 180px;
+        top: 50px !important;
+        left: -23px !important;
+        position: absolute;
+        margin: 0 auto;
+
+        overflow: hidden;
+      }
+
+      #swipeCar {
+        z-index: 11;
+        cursor: pointer;
+      }
+
+      #leftBTN,#rightBTN {
+        z-index: 12;
+        /* background-color: green;  */
+        cursor: pointer;
+      }
+
+      #swipeCar.sm {
+        width: 320px;
+        height: 180px;
+        /* background-color: olive; */
+        top: 20px !important;
+        left: -10px !important;
+        position: absolute;
+      }
+
+      #swipeCar.md {
+        width: 360px;
+        height: 180px;
+        /* background-color: blue; */
+        top: 190px !important;
+        left: -16px !important;
+        position: absolute;
+      }
+
+      #swipeCar.lg {
+        width: 360px;
+        height: 180px;
+        /* background-color: yellow; */
+        top: -15px !important;
+        left: -20px !important;
+        position: absolute;
+      }
+
+      #swipeCar.xl {
+        width: 360px;
+        height: 180px;
+        /* background-color: green; */
+        top: 47px !important;
+        left: -20px !important;
+        position: absolute;
+      }
+
+      /* left button attributes preview mode */
+          .preview #leftBTN.sm {
+              width: 41px;
+              height: 41px;
+              position: absolute;
+              top: 80px !important;
+              left: 13px !important;
+            }
+
+          .preview #leftBTN.md{
+              width: 41px;
+              height: 42px;
+              position: absolute;
+              top: 246px !important;
+              left: 6px !important;
+            }
+          .preview #leftBTN.lg {
+              width: 41px;
+              height: 42px;
+              position: absolute;
+              top: 44px !important;
+              left: 6px !important;
+            }
+          .preview #leftBTN.xl {
+              width: 41px;
+              height: 42px;
+              position: absolute;
+              top: 106px !important;
+              left: 6px !important;
+            }
+
+      /* right button attributes for preview mode */
+          .preview #rightBTN.sm {
+              width: 41px;
+              height: 41px;
+              position: absolute;
+              top: 80px !important;
+              right: 9px !important;
+            }
+
+          .preview #rightBTN.md {
+              width: 42px;
+              height: 42px;
+              position: absolute;
+              top: 246px !important;
+              right: 41px !important;
+            }
+          .preview #rightBTN.lg {
+              width: 42px;
+              height: 42px;
+              position: absolute;
+              top: 43px !important;
+              right: 41px !important;
+            }
+
+          .preview #rightBTN.xl  {
+              width: 42px;
+              height: 42px;
+              position: absolute;
+              top: 108px !important;
+              right: 41px !important;
+            }
+
+/* left button attributes for device */
+      #leftBTN.sm {
+        width: 41px;
+        height: 41px;
+        position: absolute;
+        top: 80px !important;
+        left: 13px !important;
+      }
+
+      #leftBTN.md{
+        width: 41px;
+        height: 42px;
+        position: absolute;
+        top: 246px !important;
+        left: 6px !important;
+      }
+      #leftBTN.lg {
+        width: 41px;
+        height: 42px;
+        position: absolute;
+        top: 58px !important;
+        left: 24px !important;
+      }
+      #leftBTN.xl {
+        width: 41px;
+        height: 42px;
+        position: absolute;
+        top: 106px !important;
+        left: 6px !important;
+      }
+
+/* right button attributes for device */
+      #rightBTN.sm {
+        width: 41px;
+        height: 41px;
+        position: absolute;
+        top: 80px !important;
+        right: 9px !important;
+      }
+
+      #rightBTN.md {
+        width: 42px;
+        height: 42px;
+        position: absolute;
+        top: 2px !important;
+        right: 41px !important;
+      }
+      #rightBTN.lg {
+        width: 42px;
+        height: 42px;
+        position: absolute;
+        top: 58px !important;
+        right: 24px !important;
+      }
+
+      #rightBTN.xl {
+        width: 42px;
+        height: 42px;
+        position: absolute;
+        top: 108px !important;
+        right: 39px !important;
+      }
+
+
+  </style>
+  </head>
+
+  <body>
+    <!-- #labAdDiv is the main container for all AD elements -->
+    <div id="labAdDiv">
+      <div id="swipeCar"></div>
+      <div id="leftBTN"></div>
+      <div id="rightBTN"></div>
+    </div>
+
+    <!-- Container for all tracking pixels - manually placed or dynamically generated. -->
+    <div id="labTracking" style="display:none;">
+      <!-- 3P IAS OR MOAT TRACKING GOES HERE IF APPLICABLE -->
+    </div>
+
+    <!-- Preview Mode Structure - DO NOT EDIT -->
+    <div id="previewMainContainer">
+      <!-- LEFT FORM COL -->
+      <div id="previewColLeft">
+        <hr> <img id="previewFormLogo" src="" alt="IBM Watson Advertising">
+        <hr>
+        <p id="previewFormProduct"> Mobile App Integrated Marquee</p>
+        <hr>
+        <p id="previewFormClientName"> Client Name Here </p>
+        <hr>
+        <div id="previewFormDeviceSize">
+          <p>Device Size</p>
+          <!-- // added this for XL sizes preview - wodev comment-->
+          <input type="radio" name="deviceSize" value="sm" id="deviceSmall">
+          <label for="deviceSmall" id="label-01">SM</label>
+          <input type="radio" name="deviceSize" value="md" id="deviceMedium">
+          <label for="deviceMedium" id="label-02">RG</label>
+          <input type="radio" name="deviceSize" value="lg" id="deviceLarge">
+          <label for="deviceLarge" id="label-03">LG</label>
+          <input type="radio" name="deviceSize" value="xl" id="deviceXLarge">
+          <label for="deviceXLarge" id="label-04">XL</label>
+      <!-- // added this for medium sizes preview - wodev comment -->
+        </div>
+        <hr>
+        <div id="previewFormCondition">
+          <div id="btnPrevCond"><img src="https://s.w-x.co/cl/wxcl/preview-mode/idd/prev.png" /></div>
+              <div id="txtCondName"></div>
+          <div id="btnNextCond"><img src="https://s.w-x.co/cl/wxcl/preview-mode/idd/next.png" /></div>
+          </div>
+        <hr>
+        <div id="previewFormConditionIndex"></div>
+      </div>
+
+      <!-- RIGHT AD COL  -->
+      <div id="previewColRight">
+        <div id="previewAppOverlay">
+          <!-- previewAppOverlay = newer layout with images for device and app ui. -->
+          <div id="previewDeviceToggleBtn"></div>
+          <div id="previewDeviceOverlay"></div>
+          <!-- START: ADD THIS for city, state textfield -->
+          <div id="previewCityStateOverlay">
+            <input type="text" id="cityStateInput" value="Durango, CO" readonly>
+          </div>
+    		  <!-- END: ADD THIS for city, state textfield -->
+          <div id="previewUiCon">
+            <div id="previewUiOverlay"></div>
+          </div>
+          <div id="previewUiFCOverlay"></div>
+          <div id="previewBlockerBottom"></div>
+        </div>
+        <div id="previewAppLayout">
+          <!-- previewAppLayout (previously previewAppContainer) = older layout with colored divs representing different regions of app. -->
+          <div id="previewAppHeader"></div>
+          <div id="previewAppToggle"></div>
+          <div id="previewAppChart"></div>
+          <div id="previewAppInsight"></div>
+          <div id="previewAppGradient"></div>
+          <div id="previewAppNav"></div>
+          <div id="previewAppCoverRight"></div>
+          <div id="previewAppCoverLeft"></div>
+        </div>
+
+      <!-- End Right Column -->
+      </div>
+    </div>
+    <div id="previewAltContainer"> <img id="previewAltLogo" src="" alt="IBM Watson Advertising">
+      <p>Please increase browser width to view creative preview form.</p>
+    </div>
+
+  </body>
+</html>
